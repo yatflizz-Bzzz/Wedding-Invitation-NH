@@ -62,6 +62,9 @@ const SIDE_LABELS: Record<GuestSide, string> = {
   colleague: 'Rakan Sekerja',
 };
 
+const ORGANIZER_SECRET_KEY = 'nh2712';
+const ORGANIZER_STORAGE_KEY = 'nh_organizer_access';
+
 export function RsvpPage({
   rsvps,
   isLoading,
@@ -77,6 +80,27 @@ export function RsvpPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<RsvpRecord | null>(null);
   const [wishFilter, setWishFilter] = useState<'all' | 'attending' | 'declining'>('all');
+
+  const isOrganizerMode = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === ORGANIZER_SECRET_KEY) {
+      try {
+        window.sessionStorage.setItem(ORGANIZER_STORAGE_KEY, 'true');
+      } catch {
+        // Abaikan jika storage disekat pelayar
+      }
+      return true;
+    }
+    try {
+      if (window.sessionStorage.getItem(ORGANIZER_STORAGE_KEY) === 'true') {
+        return true;
+      }
+    } catch {
+      // Abaikan jika storage disekat pelayar
+    }
+    return Boolean(authUser && !authUser.isAnonymous);
+  }, [authUser]);
 
   const summary = useMemo(() => summarizeRsvps(rsvps), [rsvps]);
 
@@ -699,12 +723,14 @@ export function RsvpPage({
             </aside>
           </div>
 
-          {/* Panel Penjejakan RSVP & Maklum Balas Penganjur */}
-          <OrganizerTrackerPanel
-            publicRsvps={rsvps}
-            authUser={authUser}
-            authReady={authReady}
-          />
+          {/* Panel Penjejakan RSVP & Maklum Balas Penganjur (Hanya kelihatan untuk penganjur) */}
+          {isOrganizerMode && (
+            <OrganizerTrackerPanel
+              publicRsvps={rsvps}
+              authUser={authUser}
+              authReady={authReady}
+            />
+          )}
         </ErrorBoundary>
       </div>
     </div>
