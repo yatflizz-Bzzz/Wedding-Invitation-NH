@@ -123,27 +123,31 @@ export function subscribePublicWishes(
     (snapshot) => {
       const records = snapshot.docs
         .map((snap) =>
-          mapPublicDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
-        )
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      onData(records);
-    },
-    (error) => {
-      onError?.('Tidak dapat memuatkan ucapan tetamu daripada pangkalan data buat masa ini.');
-      handleFirestoreError(error, OperationType.LIST, PUBLIC_WISHES_COLLECTION);
-    }
-  );
-}
-
-export function subscribePrivateRsvps(
+          export function subscribePrivateRsvps(
   onData: (records: RsvpRecord[]) => void,
   onError?: (message: string) => void
 ): Unsubscribe {
   const q = query(
     collection(db, PRIVATE_RSVPS_COLLECTION),
-    orderBy('createdAt', 'desc'),
     limit(500)
   );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const records = snapshot.docs
+        .map((snap) =>
+          mapPrivateDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
+        )
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      onData(records);
+    },
+    (error) => {
+      onError?.('Akses ke rekod penuh tetamu ditolak atau sesi pengesahan tamat.');
+      handleFirestoreError(error, OperationType.LIST, PRIVATE_RSVPS_COLLECTION);
+    }
+  );
+}
 
   return onSnapshot(
     q,
