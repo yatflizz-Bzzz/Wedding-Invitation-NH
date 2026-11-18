@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   CheckCircle2,
@@ -72,6 +72,7 @@ export function OrganizerTrackerPanel({
   authReady,
 }: OrganizerTrackerPanelProps) {
   const isOrganizer = isVerifiedOrganizerUser(authUser);
+  const hasNonAnonymousAccount = Boolean(authUser && !authUser.isAnonymous);
 
   const [privateRsvps, setPrivateRsvps] = useState<RsvpRecord[]>([]);
   const [isLoadingPrivate, setIsLoadingPrivate] = useState<boolean>(false);
@@ -115,8 +116,7 @@ export function OrganizerTrackerPanel({
     return () => unsubscribe();
   }, [authReady, isOrganizer]);
 
-  // Public summary from public_wishes; enriched by privateRsvps when organizer is authenticated
-  const activeDataset = isOrganizer && privateRsvps.length >= publicRsvps.length ? privateRsvps : publicRsvps;
+  const activeDataset = isOrganizer ? privateRsvps : publicRsvps;
   const analytics = useMemo(() => summarizeRsvpAnalytics(activeDataset), [activeDataset]);
 
   const filteredPrivateRecords = useMemo(() => {
@@ -181,6 +181,7 @@ export function OrganizerTrackerPanel({
   const handleToggleCheckIn = async (record: RsvpRecord) => {
     setSavingId(record.id);
     setActionFeedback(null);
+    setPrivateError(null);
     try {
       const currentNotes = noteDrafts[record.id] ?? record.organizerNotes ?? '';
       await updateOrganizerRsvpTracking(record.id, {
@@ -192,6 +193,10 @@ export function OrganizerTrackerPanel({
           ? `${record.fullName} ditandakan telah daftar masuk.`
           : `Status daftar masuk ${record.fullName} dikemas kini.`
       );
+    } catch (err) {
+      setPrivateError(
+        err instanceof Error ? err.message : 'Gagal mengemas kini status daftar masuk.'
+      );
     } finally {
       setSavingId(null);
     }
@@ -200,6 +205,7 @@ export function OrganizerTrackerPanel({
   const handleSaveNotes = async (record: RsvpRecord) => {
     setSavingId(record.id);
     setActionFeedback(null);
+    setPrivateError(null);
     try {
       const nextNotes = noteDrafts[record.id] ?? record.organizerNotes ?? '';
       await updateOrganizerRsvpTracking(record.id, {
@@ -207,6 +213,10 @@ export function OrganizerTrackerPanel({
         organizerNotes: nextNotes,
       });
       setActionFeedback(`Catatan penganjur untuk ${record.fullName} berjaya disimpan.`);
+    } catch (err) {
+      setPrivateError(
+        err instanceof Error ? err.message : 'Gagal menyimpan catatan penganjur.'
+      );
     } finally {
       setSavingId(null);
     }
@@ -215,17 +225,25 @@ export function OrganizerTrackerPanel({
   const handleConfirmDelete = async (record: RsvpRecord) => {
     setSavingId(record.id);
     setActionFeedback(null);
+    setPrivateError(null);
     try {
       await deleteRsvpSubmission(record.id);
+      setPrivateRsvps((prev) => prev.filter((item) => item.id !== record.id));
       setConfirmDeleteId(null);
       setActionFeedback(`Rekod ${record.fullName} telah dipadam daripada pangkalan data.`);
+    } catch (err) {
+      setPrivateError(
+        err instanceof Error
+          ? err.message
+          : 'Gagal memadam rekod tetamu. Pastikan anda log masuk sebagai penganjur.'
+      );
     } finally {
       setSavingId(null);
     }
   };
 
   return (
-    <section aria-labelledby="organizer-tracker-heading" className="mt-10 mx-auto max-w-5xl">
+    <section aria-labelledby="organizer-tracker-heading" className="mx-auto max-w-5xl">
       <PaperLaceCard lilySize="sm">
         {/* Tajuk Panel Penjejakan */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#f2c8da] pb-4">
@@ -241,12 +259,12 @@ export function OrganizerTrackerPanel({
                 Sistem Penjejakan RSVP &amp; Maklum Balas Penganjur
               </h2>
               <p className="text-xs sm:text-sm text-[#591d36]/80 mt-0.5">
-                Semua pengesahan RSVP dan maklum balas pelawat disimpan terus ke pangkalan data awan masa nyata untuk dipantau di Vercel.
+                Semua pengesahan RSVP dan maklum balas pelawat disimpan terus ke pangkalan data awan masa nyata untuk dipantau dan diuruskan.
               </p>
             </div>
           </div>
 
-          {authUser && (
+          {hasNonAnonymousAccount && (
             <button
               type="button"
               onClick={handleLogout}
@@ -258,7 +276,7 @@ export function OrganizerTrackerPanel({
           )}
         </div>
 
-        {/* Ringkasan Analitik Umum (Tanpa PII) */}
+        {/* Ringkasan Analitik */}
         <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3.5">
           {/* Pecahan Pihak Tetamu */}
           <div className="rounded-2xl border border-[#f2c8da] bg-[#ffffff]/90 p-3.5">
@@ -349,16 +367,22 @@ export function OrganizerTrackerPanel({
         )}
 
         {/* Gerbang Akses Penganjur */}
-        {!authUser ? (
-          <div className="mt-5 rounded-2xl border border-[#f2c8da] bg-[#ffffff]/92 p-4 sm:p-5">
+        {!isOrganizer ? (
+          <div className="mt-5 rounded-2xl border border-[#f2c8da] bg-[#ffffff]/92 p-4 sm:p-5 space-y-4">
+            {hasNonAnonymousAccount && (
+              <div className="rounded-xl border border-[#b23c62]/40 bg-[#fdf2f7] p-3 text-xs text-[#8e1b42]">
+                Akaun semasa (<strong>{authUser?.email || 'Tidak diketahui'}</strong>) tidak mempunyai kebenaran admin. Sila log masuk menggunakan e-mel penganjur <strong>{ORGANIZER_EMAIL}</strong>.
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <p className="inline-flex items-center gap-1.5 font-display text-sm font-semibold text-[#591d36]">
                   <Lock className="h-4 w-4 text-[#b23c62]" />
-                  <span>Buka Rekod Penuh &amp; Maklum Balas Peribadi Penganjur</span>
+                  <span>Log Masuk Penganjur Untuk Lihat &amp; Padam Rekod Tetamu</span>
                 </p>
                 <p className="text-xs text-[#591d36]/80 leading-relaxed max-w-xl">
-                  Log masuk menggunakan akaun penganjur (<span className="font-semibold">{ORGANIZER_EMAIL}</span>) untuk melihat nombor telefon WhatsApp tetamu, e-mel, keperluan makanan, maklum balas peribadi pelawat, daftar masuk majlis, dan muat turun fail Excel/CSV.
+                  Tekan butang <strong>Sign in with Google</strong> dan pilih akaun <span className="font-semibold">{ORGANIZER_EMAIL}</span> untuk memaparkan semua rekod RSVP pelawat, nombor WhatsApp, ucapan, dan butang padam data.
                 </p>
               </div>
 
@@ -404,32 +428,14 @@ export function OrganizerTrackerPanel({
               </button>
             </div>
 
-            <details className="mt-3 border-t border-[#f2c8da]/60 pt-2.5 text-xs text-[#591d36]/75">
+            <details className="border-t border-[#f2c8da]/60 pt-2.5 text-xs text-[#591d36]/75">
               <summary className="cursor-pointer font-medium text-[#591d36] hover:underline">
-                Nota penggunaan di Vercel.com
+                Jika pop-up Google gagal dibuka di Vercel
               </summary>
               <p className="mt-1.5 leading-relaxed">
-                Tetamu boleh menghantar RSVP dan maklum balas di mana-mana domain Vercel tanpa log masuk. Untuk log masuk ke panel penganjur ini dari pautan <code className="rounded bg-[#fbe9f0] px-1 py-0.5">*.vercel.app</code> anda, pastikan domain Vercel tersebut didaftarkan di Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains.
+                Pastikan domain <code className="rounded bg-[#fbe9f0] px-1 py-0.5">{typeof window !== 'undefined' ? window.location.hostname : '*.vercel.app'}</code> didaftarkan di Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains.
               </p>
             </details>
-          </div>
-        ) : !isOrganizer ? (
-          <div className="mt-5 rounded-2xl border border-[#b23c62]/50 bg-[#fdf2f7] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="font-display text-sm font-semibold text-[#591d36]">
-                Akaun Tidak Diberi Kuasa ({authUser.email || 'Tidak diketahui'})
-              </p>
-              <p className="text-xs text-[#591d36]/80 mt-0.5">
-                Maklumat peribadi tetamu dilindungi dan hanya boleh diakses oleh e-mel penganjur yang disahkan ({ORGANIZER_EMAIL}).
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="btn-ivory-silk rounded-full px-4 py-2 text-xs font-semibold text-[#591d36] cursor-pointer shrink-0"
-            >
-              Tukar Akaun Google
-            </button>
           </div>
         ) : (
           /* Papan Pemuka Penjejakan Penuh Penganjur */
@@ -441,10 +447,10 @@ export function OrganizerTrackerPanel({
                   Log masuk disahkan sebagai Penganjur:
                 </p>
                 <p className="font-display text-sm sm:text-base font-semibold text-[#591d36]">
-                  {authUser.email}
+                  {authUser?.email}
                 </p>
                 <p className="text-xs text-[#591d36]/80 mt-0.5">
-                  Daftar masuk: {analytics.checkedInParties} kumpulan ({analytics.checkedInGuests} pax) · {analytics.feedbackCommentsCount} maklum balas bertulis
+                  Jumlah rekod: {privateRsvps.length} · Daftar masuk: {analytics.checkedInParties} kumpulan ({analytics.checkedInGuests} pax)
                 </p>
               </div>
 
@@ -596,17 +602,18 @@ export function OrganizerTrackerPanel({
                           </button>
 
                           {confirmDeleteId === record.id ? (
-                            <div className="inline-flex items-center gap-1">
+                            <div className="inline-flex items-center gap-1.5">
                               <button
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleConfirmDelete(record)}
-                                className="rounded-full bg-[#9f1d45] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
+                                className="rounded-full bg-[#9f1d45] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer disabled:opacity-60"
                               >
-                                Sahkan Padam
+                                {isBusy ? 'Memadam...' : 'Sahkan Padam'}
                               </button>
                               <button
                                 type="button"
+                                disabled={isBusy}
                                 onClick={() => setConfirmDeleteId(null)}
                                 className="rounded-full border border-[#e892b0] px-2.5 py-1.5 text-xs text-[#591d36] cursor-pointer"
                               >
@@ -618,9 +625,10 @@ export function OrganizerTrackerPanel({
                               type="button"
                               onClick={() => setConfirmDeleteId(record.id)}
                               aria-label={`Padam rekod ${record.fullName}`}
-                              className="rounded-full border border-[#f2c8da] p-1.5 text-[#8e1b42] hover:bg-[#fdf2f7] cursor-pointer"
+                              className="inline-flex items-center gap-1 rounded-full border border-[#f2c8da] bg-[#fdf2f7] px-3 py-1.5 text-xs font-semibold text-[#8e1b42] hover:bg-[#fbe3ed] cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
+                              <span>Padam</span>
                             </button>
                           )}
                         </div>
