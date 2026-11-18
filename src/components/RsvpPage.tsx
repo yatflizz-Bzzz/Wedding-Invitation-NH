@@ -8,7 +8,7 @@ import {
   Star,
   Users,
 } from 'lucide-react';
-import { RsvpConfirmationPage } from './RsvpConfirmationPage';
+import {
   CardFlowerCorners,
   MeadowFlowerBorder,
   SwirledMonogram,
@@ -16,6 +16,7 @@ import { RsvpConfirmationPage } from './RsvpConfirmationPage';
 import { ErrorBoundary } from './ErrorBoundary';
 import { OrganizerTrackerPanel } from './OrganizerTrackerPanel';
 import { PaperLaceCard } from './PaperLaceCard';
+import { RsvpConfirmationPage } from './RsvpConfirmationPage';
 import { WEDDING_DETAILS } from '../data/weddingData';
 import { submitRsvpToFirestore } from '../utils/firestoreRsvp';
 import {
@@ -96,13 +97,14 @@ export function RsvpPage({
         next.guestCount = 1;
       }
       return next;
-          const payload = normalizeRsvpPayload(form);
-      const created = await submitRsvpToFirestore(payload);
-      onRsvpSubmitted(created);
-      setSubmittedRecord(created);
-      setForm(INITIAL_FORM);
-      setErrors({});
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    if (field in errors) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    setSubmitError(null);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const validationErrors = validateRsvpForm(form);
     if (Object.keys(validationErrors).length > 0) {
@@ -120,6 +122,7 @@ export function RsvpPage({
       setSubmittedRecord(created);
       setForm(INITIAL_FORM);
       setErrors({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       let friendlyMsg = 'Tidak dapat menyimpan RSVP buat masa ini. Sila cuba lagi.';
       if (err instanceof Error && err.message) {
@@ -135,6 +138,16 @@ export function RsvpPage({
       setIsSubmitting(false);
     }
   };
+
+  if (submittedRecord) {
+    return (
+      <RsvpConfirmationPage
+        record={submittedRecord}
+        onBackToInvitation={onBackToInvitation}
+        onSubmitAnother={() => setSubmittedRecord(null)}
+      />
+    );
+  }
 
   return (
     <div className="px-4 py-8 sm:px-8 sm:py-12 space-y-12">
@@ -222,413 +235,361 @@ export function RsvpPage({
             {/* Lajur Kiri: Borang Pengesahan RSVP & Maklum Balas Pelawat */}
             <section aria-labelledby="rsvp-form-heading" className="lg:col-span-7">
               <PaperLaceCard lilySize="mixedB">
-                  if (submittedRecord) {
-    return (
-      <RsvpConfirmationPage
-        record={submittedRecord}
-        onBackToInvitation={onBackToInvitation}
-        onSubmitAnother={() => setSubmittedRecord(null)}
-      />
-    );
-  }
-
-                  <div className="py-6 text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fdf4d7] border-2 border-[#e892b0] text-[#591d36]">
-                      <CheckCircle2 className="h-9 w-9 text-[#5a8044]" />
-                    </div>
-                    <p className="font-script text-4xl text-[#591d36]">Terima Kasih!</p>
+                <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                  <div className="border-b border-[#f2c8da] pb-4">
                     <h2
                       id="rsvp-form-heading"
-                      className="font-display text-2xl font-semibold text-[#591d36] mt-1"
+                      className="font-display text-2xl font-semibold text-[#591d36]"
                     >
-                      RSVP &amp; Maklum Balas Direkodkan
+                      Borang Pengesahan RSVP
                     </h2>
-                    <p className="mt-3 text-sm sm:text-base text-[#591d36]/85 max-w-md mx-auto leading-relaxed">
-                      Terima kasih,{' '}
-                      <span className="font-semibold">{submittedRecord.fullName}</span>.{' '}
-                      {submittedRecord.status === 'attending'
-                        ? `Kami telah menempah tempat untuk ${submittedRecord.guestCount} tetamu (${submittedRecord.sessionTime}).`
-                        : 'Kami amat menghargai doa restu serta ingatan tulus anda dari jauh.'}
+                    <p className="text-sm text-[#591d36]/75 mt-1">
+                      Sila lengkapkan maklumat anda bagi memudahkan pihak keluarga membuat persiapan majlis.
                     </p>
-                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#fdf4d7] border border-[#e892b0]/50 px-3.5 py-1 text-xs font-medium text-[#4e6b38]">
-                      <Database className="h-3.5 w-3.5" />
-                      <span>Tersimpan terus ke Pangkalan Data Majlis</span>
-                    </p>
-
-                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setSubmittedRecord(null)}
-                        className="btn-plum-silk rounded-full px-6 py-2.5 text-sm font-semibold text-[#fffdf7] transition-all active:scale-95 cursor-pointer"
-                      >
-                        Hantar RSVP Lain
-                      </button>
-                      <button
-                        type="button"
-                        onClick={onBackToInvitation}
-                        className="btn-ivory-silk rounded-full px-6 py-2.5 text-sm font-semibold text-[#591d36] transition-all active:scale-95 cursor-pointer"
-                      >
-                        Kembali ke Jemputan
-                      </button>
-                    </div>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} noValidate className="space-y-5">
-                    <div className="border-b border-[#f2c8da] pb-4">
-                      <h2
-                        id="rsvp-form-heading"
-                        className="font-display text-2xl font-semibold text-[#591d36]"
-                      >
-                        Borang Pengesahan RSVP
-                      </h2>
-                      <p className="text-sm text-[#591d36]/75 mt-1">
-                        Sila lengkapkan maklumat anda bagi memudahkan pihak keluarga membuat persiapan majlis.
-                      </p>
+
+                  {submitError && (
+                    <div
+                      role="alert"
+                      className="rounded-2xl border border-[#b23c62] bg-[#fdf2f7] px-4 py-3 text-sm text-[#8e1b42]"
+                    >
+                      {submitError}
                     </div>
+                  )}
 
-                    {submitError && (
-                      <div
-                        role="alert"
-                        className="rounded-2xl border border-[#b23c62] bg-[#fdf2f7] px-4 py-3 text-sm text-[#8e1b42]"
-                      >
-                        {submitError}
-                      </div>
-                    )}
-
-                    {/* Pemilih Status Kehadiran */}
-                    <fieldset>
-                      <legend className="block text-sm font-semibold text-[#591d36] mb-2">
-                        Adakah anda akan hadir? *
-                      </legend>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {(
-                          [
-                            {
-                              value: 'attending',
-                              title: 'Hadir',
-                              sub: 'Saya akan hadir memeriahkan majlis',
-                            },
-                            {
-                              value: 'declining',
-                              title: 'Tidak Dapat Hadir',
-                              sub: 'Mengirimkan doa restu dari jauh',
-                            },
-                          ] as { value: AttendanceStatus; title: string; sub: string }[]
-                        ).map((option) => {
-                          const active = form.status === option.value;
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => handleFieldChange('status', option.value)}
-                              aria-pressed={active}
-                              className={`rounded-2xl border-2 px-4 py-3 text-left transition-all cursor-pointer ${
-                                active
-                                  ? 'border-[#6b1d3a] bg-[#fdf4d7] shadow-xs'
-                                  : 'border-[#f2c8da] bg-[#ffffff] hover:bg-[#fdf7fa]'
-                              }`}
-                            >
-                              <p className="font-display text-sm font-semibold text-[#591d36]">
-                                {option.title}
-                              </p>
-                              <p className="text-xs text-[#591d36]/75 mt-0.5">{option.sub}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </fieldset>
-
-                    {/* Nama Penuh & Telefon */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label
-                          htmlFor="rsvp-fullName"
-                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                        >
-                          Nama Penuh *
-                        </label>
-                        <input
-                          id="rsvp-fullName"
-                          name="fullName"
-                          type="text"
-                          required
-                          maxLength={RSVP_LIMITS.fullNameMax}
-                          value={form.fullName}
-                          onChange={(e) => handleFieldChange('fullName', e.target.value)}
-                          placeholder="cth. Siti Nurhaliza"
-                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
-                        />
-                        {errors.fullName && (
-                          <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                            {errors.fullName}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="rsvp-phone"
-                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                        >
-                          No. Telefon / WhatsApp *
-                        </label>
-                        <input
-                          id="rsvp-phone"
-                          name="phone"
-                          type="tel"
-                          required
-                          maxLength={RSVP_LIMITS.phoneMax}
-                          value={form.phone}
-                          onChange={(e) => handleFieldChange('phone', e.target.value)}
-                          placeholder="cth. 012-3456789"
-                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
-                        />
-                        {errors.phone && (
-                          <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                            {errors.phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* E-mel & Pihak Tetamu */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label
-                          htmlFor="rsvp-email"
-                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                        >
-                          Alamat E-mel (Pilihan)
-                        </label>
-                        <input
-                          id="rsvp-email"
-                          name="email"
-                          type="email"
-                          maxLength={RSVP_LIMITS.emailMax}
-                          value={form.email}
-                          onChange={(e) => handleFieldChange('email', e.target.value)}
-                          placeholder="anda@contoh.com"
-                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
-                        />
-                        {errors.email && (
-                          <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                            {errors.email}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="rsvp-side"
-                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                        >
-                          Pihak Tetamu
-                        </label>
-                        <select
-                          id="rsvp-side"
-                          name="side"
-                          value={form.side}
-                          onChange={(e) =>
-                            handleFieldChange('side', e.target.value as GuestSide)
-                          }
-                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
-                        >
-                          <option value="bride">Keluarga Pengantin Perempuan</option>
-                          <option value="groom">Keluarga Pengantin Lelaki</option>
-                          <option value="friend">Rakan</option>
-                          <option value="colleague">Rakan Sekerja</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Bilangan Tetamu & Waktu Ketibaan (hanya apabila hadir) */}
-                    {form.status === 'attending' && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl border border-[#f2c8da] bg-[#fdf4d7]/55 p-4">
-                        <div>
-                          <label
-                            htmlFor="rsvp-guestCount"
-                            className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                  {/* Pemilih Status Kehadiran */}
+                  <fieldset>
+                    <legend className="block text-sm font-semibold text-[#591d36] mb-2">
+                      Adakah anda akan hadir? *
+                    </legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(
+                        [
+                          {
+                            value: 'attending',
+                            title: 'Hadir',
+                            sub: 'Saya akan hadir memeriahkan majlis',
+                          },
+                          {
+                            value: 'declining',
+                            title: 'Tidak Dapat Hadir',
+                            sub: 'Mengirimkan doa restu dari jauh',
+                          },
+                        ] as { value: AttendanceStatus; title: string; sub: string }[]
+                      ).map((option) => {
+                        const active = form.status === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleFieldChange('status', option.value)}
+                            aria-pressed={active}
+                            className={`rounded-2xl border-2 px-4 py-3 text-left transition-all cursor-pointer ${
+                              active
+                                ? 'border-[#6b1d3a] bg-[#fdf4d7] shadow-xs'
+                                : 'border-[#f2c8da] bg-[#ffffff] hover:bg-[#fdf7fa]'
+                            }`}
                           >
-                            Bilangan Tetamu (Pax) *
-                          </label>
-                          <select
-                            id="rsvp-guestCount"
-                            name="guestCount"
-                            value={form.guestCount}
-                            onChange={(e) =>
-                              handleFieldChange('guestCount', Number(e.target.value))
-      
-                            className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
-                          >
-                            {[1, 2, 3, 4, 5, 6].map((n) => (
-                              <option key={n} value={n}>
-                                {n} Tetamu
-                              </option>
-                            ))}
-                          </select>
-                          {errors.guestCount && (
-                            <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                              {errors.guestCount}
+                            <p className="font-display text-sm font-semibold text-[#591d36]">
+                              {option.title}
                             </p>
-                          )}
-                        </div>
+                            <p className="text-xs text-[#591d36]/75 mt-0.5">{option.sub}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
 
-                        <div>
-                          <label
-                            htmlFor="rsvp-session"
-                            className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                          >
-                            Waktu Ketibaan Pilihan
-                          </label>
-                          <select
-                            id="rsvp-session"
-                            name="sessionTime"
-                            value={form.sessionTime}
-                            onChange={(e) => handleFieldChange('sessionTime', e.target.value)}
-                            className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
-                          >
-                            <option value="11:00 PAGI - Ketibaan Tetamu">
-                              11:00 PG · Ketibaan Tetamu
-                            </option>
-                            <option value="12:45 TENGAH HARI - Perarakan Pengantin">
-                              12:45 TGH · Perarakan Pengantin
-                            </option>
-                            <option value="2:00 PETANG - Sesi Bergambar">
-                              2:00 PTG · Sesi Bergambar
-                            </option>
-                          </select>
-                        </div>
-
-                        <div className="sm:col-span-2">
-                          <label
-                            htmlFor="rsvp-dietary"
-                            className="block text-sm font-semibold text-[#591d36] mb-1.5"
-                          >
-                            Catatan Pemakanan / Permintaan Khas (Pilihan)
-                          </label>
-                          <input
-                            id="rsvp-dietary"
-                            name="dietaryNotes"
-                            type="text"
-                            maxLength={RSVP_LIMITS.dietaryNotesMax}
-                            value={form.dietaryNotes}
-                            onChange={(e) => handleFieldChange('dietaryNotes', e.target.value)}
-                            placeholder="cth. Vegetarian, kerusi bayi diperlukan"
-                            className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Ucapan & Doa Buat Mempelai */}
+                  {/* Nama Penuh & Telefon */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label
-                        htmlFor="rsvp-wishes"
+                        htmlFor="rsvp-fullName"
                         className="block text-sm font-semibold text-[#591d36] mb-1.5"
                       >
-                        Ucapan &amp; Doa Buat Mempelai (Dipaparkan di Dinding Ucapan)
+                        Nama Penuh *
                       </label>
-                      <textarea
-                        id="rsvp-wishes"
-                        name="wishes"
-                        rows={3}
-                        maxLength={RSVP_LIMITS.wishesMax}
-                        value={form.wishes}
-                        onChange={(e) => handleFieldChange('wishes', e.target.value)}
-                        placeholder="Tuliskan ucapan indah atau doa buat Nabilah & Hidayat..."
+                      <input
+                        id="rsvp-fullName"
+                        name="fullName"
+                        type="text"
+                        required
+                        maxLength={RSVP_LIMITS.fullNameMax}
+                        value={form.fullName}
+                        onChange={(e) => handleFieldChange('fullName', e.target.value)}
+                        placeholder="cth. Siti Nurhaliza"
                         className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
                       />
-                      {errors.wishes && (
+                      {errors.fullName && (
                         <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                          {errors.wishes}
+                          {errors.fullName}
                         </p>
                       )}
                     </div>
 
-                    {/* Maklum Balas Peribadi Pelawat Kepada Penganjur */}
-                    <div className="rounded-2xl border border-[#f2c8da] bg-[#fdf7fa]/90 p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-[#591d36]">
-                            Maklum Balas Pelawat (Pilihan)
-                          </p>
-                          <p className="text-xs text-[#591d36]/75">
-                            Nilaikan pengalaman kad digital ini &amp; hantar nota peribadi terus kepada tuan rumah.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1" role="group" aria-label="Penilaian pengalaman jemputan">
-                          {[1, 2, 3, 4, 5].map((star) => {
-                            const filled = (form.feedbackRating ?? 0) >= star;
-                            return (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() =>
-                                  handleFieldChange(
-                                    'feedbackRating',
-                                    form.feedbackRating === star ? 0 : star
-                                  )
-                                }
-                                aria-label={`Beri ${star} bintang`}
-                                aria-pressed={filled}
-                                className="p-1 transition-transform hover:scale-110 cursor-pointer"
-                              >
-                                <Star
-                                  className={`h-5 w-5 ${
-                                    filled
-                                      ? 'fill-[#d4a017] text-[#d4a017]'
-                                      : 'text-[#e892b0] hover:text-[#b23c62]'
-                                  }`}
-                                />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                    <div>
+                      <label
+                        htmlFor="rsvp-phone"
+                        className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                      >
+                        No. Telefon / WhatsApp *
+                      </label>
+                      <input
+                        id="rsvp-phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        maxLength={RSVP_LIMITS.phoneMax}
+                        value={form.phone}
+                        onChange={(e) => handleFieldChange('phone', e.target.value)}
+                        placeholder="cth. 012-3456789"
+                        className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
+                      />
+                      {errors.phone && (
+                        <p className="mt-1 text-xs font-medium text-[#9f1d45]">
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
+                  {/* E-mel & Pihak Tetamu */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="rsvp-email"
+                        className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                      >
+                        Alamat E-mel (Pilihan)
+                      </label>
+                      <input
+                        id="rsvp-email"
+                        name="email"
+                        type="email"
+                        maxLength={RSVP_LIMITS.emailMax}
+                        value={form.email}
+                        onChange={(e) => handleFieldChange('email', e.target.value)}
+                        placeholder="anda@contoh.com"
+                        className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-xs font-medium text-[#9f1d45]">
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="rsvp-side"
+                        className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                      >
+                        Pihak Tetamu
+                      </label>
+                      <select
+                        id="rsvp-side"
+                        name="side"
+                        value={form.side}
+                        onChange={(e) =>
+                          handleFieldChange('side', e.target.value as GuestSide)
+                        }
+                        className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
+                      >
+                        <option value="bride">Keluarga Pengantin Perempuan</option>
+                        <option value="groom">Keluarga Pengantin Lelaki</option>
+                        <option value="friend">Rakan</option>
+                        <option value="colleague">Rakan Sekerja</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Bilangan Tetamu & Waktu Ketibaan (hanya apabila hadir) */}
+                  {form.status === 'attending' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl border border-[#f2c8da] bg-[#fdf4d7]/55 p-4">
                       <div>
-                        <label htmlFor="rsvp-feedbackComment" className="sr-only">
-                          Maklum Balas &amp; Cadangan Untuk Tuan Rumah
+                        <label
+                          htmlFor="rsvp-guestCount"
+                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                        >
+                          Bilangan Tetamu (Pax) *
                         </label>
-                        <textarea
-                          id="rsvp-feedbackComment"
-                          name="feedbackComment"
-                          rows={3}
-                          maxLength={RSVP_LIMITS.feedbackCommentMax}
-                          value={form.feedbackComment ?? ''}
+                        <select
+                          id="rsvp-guestCount"
+                          name="guestCount"
+                          value={form.guestCount}
                           onChange={(e) =>
-                            handleFieldChange('feedbackComment', e.target.value)
+                            handleFieldChange('guestCount', Number(e.target.value))
                           }
-                          placeholder="Cadangan, pertanyaan parkir, atau maklum balas peribadi untuk penganjur..."
-                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
-                        />
-                        {errors.feedbackComment && (
+                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
+                        >
+                          {[1, 2, 3, 4, 5, 6].map((n) => (
+                            <option key={n} value={n}>
+                              {n} Tetamu
+                            </option>
+                          ))}
+                        </select>
+                        {errors.guestCount && (
                           <p className="mt-1 text-xs font-medium text-[#9f1d45]">
-                            {errors.feedbackComment}
+                            {errors.guestCount}
                           </p>
                         )}
                       </div>
+
+                      <div>
+                        <label
+                          htmlFor="rsvp-session"
+                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                        >
+                          Waktu Ketibaan Pilihan
+                        </label>
+                        <select
+                          id="rsvp-session"
+                          name="sessionTime"
+                          value={form.sessionTime}
+                          onChange={(e) => handleFieldChange('sessionTime', e.target.value)}
+                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
+                        >
+                          <option value="11:00 PAGI - Ketibaan Tetamu">
+                            11:00 PG · Ketibaan Tetamu
+                          </option>
+                          <option value="12:45 TENGAH HARI - Perarakan Pengantin">
+                            12:45 TGH · Perarakan Pengantin
+                          </option>
+                          <option value="2:00 PETANG - Sesi Bergambar">
+                            2:00 PTG · Sesi Bergambar
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label
+                          htmlFor="rsvp-dietary"
+                          className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                        >
+                          Catatan Pemakanan / Permintaan Khas (Pilihan)
+                        </label>
+                        <input
+                          id="rsvp-dietary"
+                          name="dietaryNotes"
+                          type="text"
+                          maxLength={RSVP_LIMITS.dietaryNotesMax}
+                          value={form.dietaryNotes}
+                          onChange={(e) => handleFieldChange('dietaryNotes', e.target.value)}
+                          placeholder="cth. Vegetarian, kerusi bayi diperlukan"
+                          className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ucapan & Doa Buat Mempelai */}
+                  <div>
+                    <label
+                      htmlFor="rsvp-wishes"
+                      className="block text-sm font-semibold text-[#591d36] mb-1.5"
+                    >
+                      Ucapan &amp; Doa Buat Mempelai (Dipaparkan di Dinding Ucapan)
+                    </label>
+                    <textarea
+                      id="rsvp-wishes"
+                      name="wishes"
+                      rows={3}
+                      maxLength={RSVP_LIMITS.wishesMax}
+                      value={form.wishes}
+                      onChange={(e) => handleFieldChange('wishes', e.target.value)}
+                      placeholder="Tuliskan ucapan indah atau doa buat Nabilah & Hidayat..."
+                      className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
+                    />
+                    {errors.wishes && (
+                      <p className="mt-1 text-xs font-medium text-[#9f1d45]">
+                        {errors.wishes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Maklum Balas Peribadi Pelawat Kepada Penganjur */}
+                  <div className="rounded-2xl border border-[#f2c8da] bg-[#fdf7fa]/90 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[#591d36]">
+                          Maklum Balas Pelawat (Pilihan)
+                        </p>
+                        <p className="text-xs text-[#591d36]/75">
+                          Nilaikan pengalaman kad digital ini &amp; hantar nota peribadi terus kepada tuan rumah.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1" role="group" aria-label="Penilaian pengalaman jemputan">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const filled = (form.feedbackRating ?? 0) >= star;
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() =>
+                                handleFieldChange(
+                                  'feedbackRating',
+                                  form.feedbackRating === star ? 0 : star
+                                )
+                              }
+                              aria-label={`Beri ${star} bintang`}
+                              aria-pressed={filled}
+                              className="p-1 transition-transform hover:scale-110 cursor-pointer"
+                            >
+                              <Star
+                                className={`h-5 w-5 ${
+                                  filled
+                                    ? 'fill-[#d4a017] text-[#d4a017]'
+                                    : 'text-[#e892b0] hover:text-[#b23c62]'
+                                }`}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="btn-plum-silk w-full inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm sm:text-base font-semibold text-[#fffdf7] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b1d3a]"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Menyimpan RSVP Anda...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          <span>Sahkan RSVP</span>
-                        </>
+                    <div>
+                      <label htmlFor="rsvp-feedbackComment" className="sr-only">
+                        Maklum Balas &amp; Cadangan Untuk Tuan Rumah
+                      </label>
+                      <textarea
+                        id="rsvp-feedbackComment"
+                        name="feedbackComment"
+                        rows={3}
+                        maxLength={RSVP_LIMITS.feedbackCommentMax}
+                        value={form.feedbackComment ?? ''}
+                        onChange={(e) =>
+                          handleFieldChange('feedbackComment', e.target.value)
+                        }
+                        placeholder="Cadangan, pertanyaan parkir, atau maklum balas peribadi untuk penganjur..."
+                        className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2 text-sm text-[#4e1228] placeholder:text-[#4e1228]/40 focus:border-[#6b1d3a] focus:outline-none"
+                      />
+                      {errors.feedbackComment && (
+                        <p className="mt-1 text-xs font-medium text-[#9f1d45]">
+                          {errors.feedbackComment}
+                        </p>
                       )}
-                    </button>
-                  </form>
-                )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-plum-silk w-full inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm sm:text-base font-semibold text-[#fffdf7] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b1d3a]"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Menyimpan RSVP Anda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Sahkan RSVP</span>
+                      </>
+                    )}
+                  </button>
+                </form>
               </PaperLaceCard>
             </section>
 
