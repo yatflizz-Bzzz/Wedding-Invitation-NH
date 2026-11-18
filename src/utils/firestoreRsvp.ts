@@ -3,7 +3,6 @@ import {
   doc,
   limit,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   Timestamp,
@@ -123,7 +122,19 @@ export function subscribePublicWishes(
     (snapshot) => {
       const records = snapshot.docs
         .map((snap) =>
-          export function subscribePrivateRsvps(
+          mapPublicDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
+        )
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      onData(records);
+    },
+    (error) => {
+      onError?.('Tidak dapat memuatkan ucapan tetamu daripada pangkalan data buat masa ini.');
+      handleFirestoreError(error, OperationType.LIST, PUBLIC_WISHES_COLLECTION);
+    }
+  );
+}
+
+export function subscribePrivateRsvps(
   onData: (records: RsvpRecord[]) => void,
   onError?: (message: string) => void
 ): Unsubscribe {
@@ -140,21 +151,6 @@ export function subscribePublicWishes(
           mapPrivateDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
         )
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      onData(records);
-    },
-    (error) => {
-      onError?.('Akses ke rekod penuh tetamu ditolak atau sesi pengesahan tamat.');
-      handleFirestoreError(error, OperationType.LIST, PRIVATE_RSVPS_COLLECTION);
-    }
-  );
-}
-
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const records = snapshot.docs.map((snap) =>
-        mapPrivateDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
-      );
       onData(records);
     },
     (error) => {
