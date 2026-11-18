@@ -14,7 +14,6 @@ import {
   SwirledMonogram,
 } from './BotanicalDecor';
 import { ErrorBoundary } from './ErrorBoundary';
-import { OrganizerTrackerPanel } from './OrganizerTrackerPanel';
 import { PaperLaceCard } from './PaperLaceCard';
 import { RsvpConfirmationPage } from './RsvpConfirmationPage';
 import { WEDDING_DETAILS } from '../data/weddingData';
@@ -62,15 +61,10 @@ const SIDE_LABELS: Record<GuestSide, string> = {
   colleague: 'Rakan Sekerja',
 };
 
-const ORGANIZER_SECRET_KEY = 'BellYat123';
-const ORGANIZER_STORAGE_KEY = 'nh_organizer_access';
-
 export function RsvpPage({
   rsvps,
   isLoading,
   loadError,
-  authUser,
-  authReady,
   onRsvpSubmitted,
   onBackToInvitation,
 }: RsvpPageProps) {
@@ -80,27 +74,6 @@ export function RsvpPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<RsvpRecord | null>(null);
   const [wishFilter, setWishFilter] = useState<'all' | 'attending' | 'declining'>('all');
-
-  const isOrganizerMode = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === ORGANIZER_SECRET_KEY) {
-      try {
-        window.sessionStorage.setItem(ORGANIZER_STORAGE_KEY, 'true');
-      } catch {
-        // Abaikan jika storage disekat pelayar
-      }
-      return true;
-    }
-    try {
-      if (window.sessionStorage.getItem(ORGANIZER_STORAGE_KEY) === 'true') {
-        return true;
-      }
-    } catch {
-      // Abaikan jika storage disekat pelayar
-    }
-    return Boolean(authUser && !authUser.isAnonymous);
-  }, [authUser]);
 
   const summary = useMemo(() => summarizeRsvps(rsvps), [rsvps]);
 
@@ -722,15 +695,6 @@ export function RsvpPage({
               </PaperLaceCard>
             </aside>
           </div>
-
-          {/* Panel Penjejakan RSVP & Maklum Balas Penganjur (Hanya kelihatan untuk penganjur) */}
-          {isOrganizerMode && (
-            <OrganizerTrackerPanel
-              publicRsvps={rsvps}
-              authUser={authUser}
-              authReady={authReady}
-            />
-          )}
         </ErrorBoundary>
       </div>
     </div>
