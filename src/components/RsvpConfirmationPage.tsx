@@ -1,14 +1,15 @@
-import React from 'react';
 import {
-  import {
-  ArrowLeft,
+  CalendarPlus,
+  Check,
+  Database,
+  ExternalLink,
   Heart,
-  Loader2,
-  Send,
-  Star,
-  Users,
+  RotateCcw,
+  Sparkles,
 } from 'lucide-react';
-import { RsvpConfirmationPage } from './RsvpConfirmationPage';
+import {
+  CardFlowerCorners,
+  TwoCatsIllustration,
 } from './BotanicalDecor';
 import { WEDDING_DETAILS } from '../data/weddingData';
 import { buildIcsContent, type RsvpRecord } from '../utils/wedding';
@@ -47,7 +48,6 @@ function CuteMiniFireworks() {
             transform: `translate(-50%, -50%) scale(${burst.scale})`,
           }}
         >
-          {/* Titik tengah bunga api */}
           <span
             className="absolute left-1/2 top-1/2 h-2.5 w-2.5 rounded-full animate-fw-core"
             style={{
@@ -57,7 +57,6 @@ function CuteMiniFireworks() {
             }}
           />
 
-          {/* Percikan kecil mengelilingi bunga api */}
           {SPARK_ANGLES.map((angle, sIdx) => (
             <span
               key={angle}
@@ -208,13 +207,11 @@ export function RsvpConfirmationPage({
         }
       `}</style>
 
-      {/* Reka bentuk kad mengikut Section 2 */}
       <div className="paper-baru-rose-card relative mx-auto w-full aspect-[945/1377] px-7 pt-7 pb-9 sm:px-13 sm:pt-12 sm:pb-14 text-center flex flex-col justify-center">
         <CardFlowerCorners variant="lg" />
         <CuteMiniFireworks />
 
         <div className="relative z-10 mx-auto w-full max-w-md my-auto">
-          {/* Animasi Tajuk Terima Kasih Atas Maklum Balas */}
           <div className="animate-thankyou-pop">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[#f2c8da] bg-[#fdf4f8]/95 px-3 py-0.5 text-[10.5px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-[#b23c62] mb-1 shadow-2xs">
               <Sparkles className="h-3 w-3 animate-pulse" />
@@ -233,7 +230,6 @@ export function RsvpConfirmationPage({
             </p>
           </div>
 
-          {/* Motif Ribbon Doves (dari Section 2) */}
           <div className="flex justify-center my-1 sm:my-2.5 animate-fade-up-1">
             <img
               src="/assets/ribbon-doves.png"
@@ -244,14 +240,12 @@ export function RsvpConfirmationPage({
             />
           </div>
 
-          {/* Nama Pengantin */}
           <h2 className="font-hero-swash text-[19px] sm:text-[26px] font-bold tracking-[0.06em] uppercase text-[#4e1228] leading-[1.1] flex flex-col items-center gap-0.5 animate-fade-up-1">
             <span className="block">{WEDDING_DETAILS.bride}</span>
             <span className="block">&amp;</span>
             <span className="block">{WEDDING_DETAILS.groom}</span>
           </h2>
 
-          {/* Kotak Pengesahan (Gaya Countdown Panel Section 2) */}
           <div className="mt-2 sm:mt-4 mx-auto max-w-xs sm:max-w-sm rounded-2xl sm:rounded-3xl border border-[#f2c8da] bg-gradient-to-br from-[#fdf4f8] via-[#ffffff] to-[#fdf6df] px-3.5 py-2.5 sm:px-5 sm:py-4 shadow-xs animate-fade-up-2">
             <div className="mx-auto mb-1 flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#6b1d3a] text-[#fffdf7] shadow-xs">
               <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -277,7 +271,6 @@ export function RsvpConfirmationPage({
             </div>
           </div>
 
-          {/* Butang Tindakan */}
           <div className="mt-2.5 sm:mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 animate-fade-up-2">
             {isAttending && (
               <>
