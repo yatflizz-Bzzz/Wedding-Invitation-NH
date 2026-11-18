@@ -225,7 +225,16 @@ export function RsvpPage({
             {/* Lajur Kiri: Borang Pengesahan RSVP & Maklum Balas Pelawat */}
             <section aria-labelledby="rsvp-form-heading" className="lg:col-span-7">
               <PaperLaceCard lilySize="mixedB">
-                {submittedRecord ? (
+                  if (submittedRecord) {
+    return (
+      <RsvpConfirmationPage
+        record={submittedRecord}
+        onBackToInvitation={onBackToInvitation}
+        onSubmitAnother={() => setSubmittedRecord(null)}
+      />
+    );
+  }
+
                   <div className="py-6 text-center">
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fdf4d7] border-2 border-[#e892b0] text-[#591d36]">
                       <CheckCircle2 className="h-9 w-9 text-[#5a8044]" />
@@ -451,7 +460,7 @@ export function RsvpPage({
                             value={form.guestCount}
                             onChange={(e) =>
                               handleFieldChange('guestCount', Number(e.target.value))
-                            }
+      
                             className="w-full rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3.5 py-2.5 text-sm text-[#4e1228] focus:border-[#6b1d3a] focus:outline-none"
                           >
                             {[1, 2, 3, 4, 5, 6].map((n) => (
