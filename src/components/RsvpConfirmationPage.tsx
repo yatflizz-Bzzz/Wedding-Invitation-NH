@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   CalendarPlus,
   Check,
-  Database,
   ExternalLink,
   Heart,
   RotateCcw,
@@ -257,8 +256,8 @@ export function RsvpConfirmationPage({
             <span className="block">{WEDDING_DETAILS.groom}</span>
           </h2>
 
-          {/* Maklumat Pengesahan Tetamu (Tanpa Kotak Latar Belakang & Tanpa Kucing) */}
-          <div className="mt-1.5 sm:mt-2.5 mx-auto max-w-[285px] sm:max-w-sm animate-fade-up-2">
+          {/* Maklumat Pengesahan Tetamu */}
+          <div className="mt-2 sm:mt-3 mx-auto max-w-[285px] sm:max-w-sm animate-fade-up-2">
             <div className="inline-flex items-center justify-center gap-1.5">
               <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#6b1d3a] text-[#fffdf7] shadow-2xs">
                 <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
@@ -268,20 +267,15 @@ export function RsvpConfirmationPage({
               </p>
             </div>
 
-            <p className="mt-0.5 text-[11px] sm:text-[13px] text-[#4e1228] leading-snug">
+            <p className="mt-1 text-[11px] sm:text-[13px] text-[#4e1228] leading-snug">
               {isAttending
                 ? `Kehadiran untuk ${record.guestCount} tetamu (${record.sessionTime}) telah berjaya direkodkan.`
                 : 'Terima kasih atas ingatan dan doa restu tulus anda buat kami berdua dari jauh.'}
             </p>
-
-            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#fdf4d7]/90 border border-[#e892b0]/50 px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-medium text-[#4e6b38]">
-              <Database className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-              <span>Tersimpan ke Pangkalan Data Majlis</span>
-            </p>
           </div>
 
           {/* Countdown Panel dari Section 2 */}
-          <div className="mt-2 sm:mt-3 mx-auto max-w-[290px] sm:max-w-sm rounded-2xl sm:rounded-3xl border border-[#f2c8da] bg-gradient-to-br from-[#fdf4f8] via-[#ffffff] to-[#fdf6df] px-3 py-1.5 sm:px-5 sm:py-3.5 shadow-xs relative animate-fade-up-2">
+          <div className="mt-2.5 sm:mt-4 mx-auto max-w-[290px] sm:max-w-sm rounded-2xl sm:rounded-3xl border border-[#f2c8da] bg-gradient-to-br from-[#fdf4f8] via-[#ffffff] to-[#fdf6df] px-3 py-1.5 sm:px-5 sm:py-3.5 shadow-xs relative animate-fade-up-2">
             <p className="font-display text-[10px] sm:text-xs tracking-[0.16em] uppercase text-[#4e1228] mb-1 sm:mb-2 font-semibold">
               Menghitung Hari Bahagia
             </p>
@@ -328,7 +322,7 @@ export function RsvpConfirmationPage({
             </div>
           </div>
 
-          <div className="mt-2 sm:mt-3.5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 animate-fade-up-2">
+          <div className="mt-2.5 sm:mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 animate-fade-up-2">
             {isAttending && (
               <>
                 <button
