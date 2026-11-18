@@ -1,0 +1,829 @@
+@import "tailwindcss";
+
+@theme {
+  --font-script: "Great Vibes", cursive;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Lora", Georgia, serif;
+
+  --color-plum: #6b1d3a;
+  --color-plum-deep: #4e1228;
+  --color-rose-lace: #e892b0;
+  --color-pink-pastel: #fad7e3;
+  --color-pink-blush: #fbe9f0;
+  --color-butter: #fdf4d7;
+  --color-butter-deep: #f6df98;
+  --color-ivory: #fffdf7;
+  --color-sky-soft: #89a8d4;
+  --color-sage-soft: #7b9a65;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: var(--font-body);
+    color: #4e1228;
+    background-color: #fffdf7;
+  }
+
+  body {
+    overflow-x: hidden;
+    background-color: transparent;
+  }
+}
+
+.font-script {
+  font-family: var(--font-script);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-canva-display {
+  font-family: "Milonga", "Playfair Display", Georgia, serif;
+}
+
+.font-canva-serif {
+  font-family: "Gabriela", "Playfair Display", Georgia, serif;
+}
+
+.font-hero-swash {
+  font-family: "Cinzel Decorative", "Playfair Display", Georgia, serif;
+}
+
+.font-font2-sans {
+  font-family: "Quicksand", sans-serif;
+}
+
+.font-countdown-num {
+  font-family: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  font-style: italic;
+}
+
+.font-countdown-label {
+  font-family: "Lobster Two", "Playfair Display", cursive;
+  font-style: italic;
+}
+
+.schedule-doily-frame {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 32px;
+  border-image-source: url("/assets/aistudio/Kertas_Tentative_2c3c2cca.png");
+  border-image-slice: 196 196 196 196 fill;
+  border-image-repeat: round;
+  filter: drop-shadow(0 18px 34px rgba(89, 29, 54, 0.2));
+}
+
+@media (min-width: 640px) {
+  .schedule-doily-frame {
+    border-width: 46px;
+  }
+}
+
+/* Reverted paper-baru-card.png design in envelope-page blush colorway, crisp white outline, and subtle see-through transparency */
+.paper-baru-rose-card {
+  position: relative;
+  background-image: url("/assets/paper-baru-card-envelope.png");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 14px 28px rgba(107, 29, 58, 0.14));
+}
+
+/* Scalloped lace doily border patterns inspired by the Canva wedding video */
+.paper-lace-card {
+  box-shadow:
+    0 20px 46px -22px rgba(89, 29, 54, 0.22),
+    0 2px 10px -2px rgba(232, 146, 176, 0.25);
+}
+
+.lace-card {
+  position: relative;
+  background: linear-gradient(155deg, rgba(255, 253, 247, 0.94) 0%, rgba(253, 244, 215, 0.9) 50%, rgba(250, 215, 227, 0.92) 100%);
+  border: 2px solid rgba(232, 146, 176, 0.65);
+  box-shadow:
+    0 18px 42px -18px rgba(107, 29, 58, 0.22),
+    inset 0 0 0 6px rgba(255, 253, 247, 0.85),
+    inset 0 0 0 8px rgba(232, 146, 176, 0.38);
+}
+
+.lace-card-pink {
+  position: relative;
+  background: linear-gradient(160deg, rgba(251, 233, 240, 0.93) 0%, rgba(250, 215, 227, 0.9) 58%, rgba(253, 244, 215, 0.89) 100%);
+  border: 2px solid rgba(217, 120, 155, 0.65);
+  box-shadow:
+    0 18px 42px -18px rgba(107, 29, 58, 0.22),
+    inset 0 0 0 6px rgba(255, 253, 247, 0.78),
+    inset 0 0 0 8px rgba(232, 146, 176, 0.45);
+}
+
+.scalloped-edge {
+  background-image:
+    radial-gradient(circle at 12px 0, rgba(255, 253, 247, 0.96) 9px, transparent 10px),
+    radial-gradient(circle at 12px 0, rgba(232, 146, 176, 0.45) 11px, transparent 12px);
+  background-size: 24px 14px;
+  background-repeat: repeat-x;
+}
+
+/* 3D Heart Wax Seal Header Emblem */
+.seal-3d-wrap {
+  perspective: 420px;
+}
+
+.seal-3d-img {
+  transform: perspective(420px) rotateX(12deg) rotateY(-10deg) translateZ(6px);
+  transform-style: preserve-3d;
+  filter:
+    contrast(1.06)
+    saturate(1.08)
+    drop-shadow(0 2px 1px rgba(78, 18, 40, 0.32))
+    drop-shadow(0 6px 8px rgba(107, 29, 58, 0.28));
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), filter 0.32s ease;
+  will-change: transform;
+}
+
+.seal-3d-wrap:hover .seal-3d-img,
+.seal-3d-wrap:focus-visible .seal-3d-img {
+  transform: perspective(420px) rotateX(-4deg) rotateY(10deg) translateZ(12px) scale(1.09);
+  filter:
+    contrast(1.08)
+    saturate(1.12)
+    drop-shadow(0 3px 2px rgba(78, 18, 40, 0.34))
+    drop-shadow(0 10px 14px rgba(107, 29, 58, 0.34));
+}
+
+.seal-3d-wrap:active .seal-3d-img {
+  transform: perspective(420px) rotateX(8deg) rotateY(0deg) translateZ(2px) scale(0.96);
+}
+
+/* Floating flowers & lively butterflies GPU-compositor animations */
+@keyframes petalFall {
+  0% {
+    transform: translate3d(0, -14vh, 0) rotate(var(--spin-start, 0deg)) scale(0.88);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--item-opacity, 0.88);
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 36px), 48vh, 0) rotate(calc(var(--spin-start, 0deg) + var(--spin-mid, 160deg))) scale(1.04);
+    opacity: var(--item-opacity, 0.88);
+  }
+  88% {
+    opacity: 0.78;
+  }
+  100% {
+    transform: translate3d(calc(var(--drift-x, 36px) * -0.55), 110vh, 0) rotate(calc(var(--spin-start, 0deg) + var(--spin-end, 330deg))) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes butterflyGlide {
+  0% {
+    transform: translate3d(-10vw, 6vh, 0) rotate(-6deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.94;
+  }
+  28% {
+    transform: translate3d(22vw, -5vh, 0) rotate(7deg);
+  }
+  54% {
+    transform: translate3d(54vw, 6vh, 0) rotate(-5deg);
+  }
+  78% {
+    transform: translate3d(82vw, -4vh, 0) rotate(6deg);
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(112vw, -7vh, 0) rotate(9deg);
+    opacity: 0;
+  }
+}
+
+@keyframes butterflyGlideReverse {
+  0% {
+    transform: translate3d(112vw, -4vh, 0) rotate(6deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.94;
+  }
+  30% {
+    transform: translate3d(76vw, 6vh, 0) rotate(-7deg);
+  }
+  58% {
+    transform: translate3d(44vw, -5vh, 0) rotate(5deg);
+  }
+  82% {
+    transform: translate3d(14vw, 5vh, 0) rotate(-6deg);
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(-12vw, -4vh, 0) rotate(-9deg);
+    opacity: 0;
+  }
+}
+
+@keyframes wingFlutter {
+  0%,
+  100% {
+    transform: scaleX(1) scaleY(1) rotate(0deg);
+  }
+  50% {
+    transform: scaleX(0.56) scaleY(1.06) rotate(-5deg);
+  }
+}
+
+@keyframes gentleSway {
+  0%,
+  100% {
+    transform: rotate(-2deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(2.5deg) translate3d(0, -4px, 0);
+  }
+}
+
+@keyframes cardReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes digitRoll {
+  0% {
+    opacity: 0.25;
+    transform: translate3d(0, -55%, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes letterBlurReveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(0, 6px, 0) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes heartSealReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.86);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes closingCtaReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-card-reveal {
+  animation: cardReveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-digit-roll {
+  animation: digitRoll 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-letter-reveal {
+  opacity: 0;
+  animation: letterBlurReveal 0.46s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, filter, transform;
+}
+
+.animate-heart-seal-reveal {
+  opacity: 0;
+  animation: heartSealReveal 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.14s forwards;
+  will-change: opacity, transform;
+}
+
+.animate-closing-cta-reveal {
+  opacity: 0;
+  animation: closingCtaReveal 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
+  will-change: opacity, transform;
+}
+
+.animate-petal {
+  animation: petalFall var(--petal-duration, 14s) linear var(--petal-delay, 0s) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-butterfly {
+  animation: butterflyGlide var(--fly-duration, 24s) ease-in-out var(--fly-delay, 0s) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-butterfly-reverse {
+  animation: butterflyGlideReverse var(--fly-duration, 26s) ease-in-out var(--fly-delay, 0s) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-wing {
+  transform-origin: center;
+  animation: wingFlutter var(--flap-duration, 0.42s) ease-in-out infinite;
+}
+
+.animate-sway {
+  transform-origin: bottom center;
+  animation: gentleSway 5.5s ease-in-out infinite;
+}
+
+@keyframes envelopeBeckon {
+  0%,
+  52%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    filter: drop-shadow(0 6px 14px rgba(107, 29, 58, 0.14));
+  }
+  14% {
+    transform: translate3d(0, -6px, 0) rotate(-1.6deg) scale(1.028);
+    filter: drop-shadow(0 14px 24px rgba(178, 60, 98, 0.28));
+  }
+  26% {
+    transform: translate3d(0, -3px, 0) rotate(1.8deg) scale(1.032);
+    filter: drop-shadow(0 14px 26px rgba(178, 60, 98, 0.32));
+  }
+  38% {
+    transform: translate3d(0, -5px, 0) rotate(-1deg) scale(1.02);
+    filter: drop-shadow(0 10px 18px rgba(178, 60, 98, 0.22));
+  }
+}
+
+@keyframes sealBeckon {
+  0%,
+  52%,
+  100% {
+    transform: scale(1);
+  }
+  20%,
+  34% {
+    transform: scale(1.09);
+  }
+}
+
+.animate-envelope-beckon {
+  transform-origin: center 55%;
+  animation: envelopeBeckon 3.2s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  will-change: transform, filter;
+}
+
+.animate-seal-beckon {
+  transform-origin: center;
+  animation: sealBeckon 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Randomized Corner Lily Blossom Animations */
+@keyframes lilySway {
+  0%,
+  100% {
+    transform: rotate(-3deg) translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: rotate(4deg) translate3d(0, -5px, 0) scale(1.04);
+  }
+}
+
+@keyframes lilyFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate3d(3px, -6px, 0) rotate(3deg) scale(1.03);
+  }
+  66% {
+    transform: translate3d(-3px, -3px, 0) rotate(-3deg) scale(0.98);
+  }
+}
+
+@keyframes lilyBloom {
+  0%,
+  100% {
+    transform: scale(0.97) rotate(-2deg);
+    filter: drop-shadow(0 4px 8px rgba(178, 60, 98, 0.14));
+  }
+  50% {
+    transform: scale(1.07) rotate(3deg);
+    filter: drop-shadow(0 8px 14px rgba(178, 60, 98, 0.24));
+  }
+}
+
+@keyframes lilyTwist {
+  0%,
+  100% {
+    transform: rotate(-5deg) scale(1);
+  }
+  50% {
+    transform: rotate(6deg) translate3d(2px, -4px, 0) scale(1.05);
+  }
+}
+
+@keyframes sparklePop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translate3d(calc(var(--sx, 12px) * 0.5), calc(var(--sy, -14px) * 0.5), 0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--sx, 12px), var(--sy, -14px), 0) scale(0.5);
+  }
+}
+
+.animate-lily-sway {
+  animation: lilySway var(--lily-dur, 5.2s) ease-in-out var(--lily-delay, 0s) infinite;
+  will-change: transform;
+}
+
+.animate-lily-float {
+  animation: lilyFloat var(--lily-dur, 5.8s) ease-in-out var(--lily-delay, -1.2s) infinite;
+  will-change: transform;
+}
+
+.animate-lily-bloom {
+  animation: lilyBloom var(--lily-dur, 4.6s) ease-in-out var(--lily-delay, -0.7s) infinite;
+  will-change: transform, filter;
+}
+
+.animate-lily-twist {
+  animation: lilyTwist var(--lily-dur, 6.4s) ease-in-out var(--lily-delay, -2.1s) infinite;
+  will-change: transform;
+}
+
+.animate-sparkle-pop {
+  animation: sparklePop 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Cross-Page Stationery Transition */
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes pageExit {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translate3d(0, -12px, 0) scale(0.988);
+  }
+}
+
+@keyframes veilCrestPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.84) rotate(-6deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.06) rotate(2deg);
+  }
+  100% {
+    opacity: 0.96;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.page-stage-enter {
+  animation: pageEnter 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, filter, transform;
+}
+
+.page-stage-exit {
+  animation: pageExit 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: opacity, filter, transform;
+}
+
+.veil-crest-pop {
+  animation: veilCrestPop 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Refined Satin & Porcelain Stationery Button Textures (preserving current colorway) */
+@layer components {
+  .btn-plum-silk {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #7d2446 0%, #6b1d3a 56%, #57152e 100%);
+    border: 1px solid rgba(250, 215, 227, 0.36);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 253, 247, 0.32),
+      inset 0 -1px 0 rgba(48, 8, 22, 0.35),
+      0 6px 16px -4px rgba(107, 29, 58, 0.34);
+  }
+
+  .btn-plum-silk::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 253, 247, 0.16);
+    pointer-events: none;
+  }
+
+  .btn-plum-silk:hover {
+    background: linear-gradient(180deg, #8e2b50 0%, #7a2142 56%, #641935 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 253, 247, 0.4),
+      inset 0 -1px 0 rgba(48, 8, 22, 0.35),
+      0 10px 22px -5px rgba(107, 29, 58, 0.42);
+  }
+
+  .btn-butter-silk {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #fef4c7 0%, #fceaa8 55%, #f5dc82 100%);
+    border: 1px solid rgba(232, 146, 176, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(191, 152, 65, 0.25),
+      0 4px 12px -3px rgba(107, 29, 58, 0.18);
+  }
+
+  .btn-butter-silk::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 253, 247, 0.55);
+    pointer-events: none;
+  }
+
+  .btn-butter-silk:hover {
+    background: linear-gradient(180deg, #fff6d1 0%, #f7df87 58%, #efd06a 100%);
+  }
+
+  .btn-blush-silk {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #fdf3f7 0%, #fbe9f0 58%, #f7d9e6 100%);
+    border: 1px solid rgba(232, 146, 176, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 -1px 0 rgba(178, 60, 98, 0.14),
+      0 3px 10px -3px rgba(107, 29, 58, 0.16);
+  }
+
+  .btn-blush-silk:hover {
+    background: linear-gradient(180deg, #fdebf2 0%, #fad7e3 60%, #f3c4d5 100%);
+  }
+
+  .btn-ivory-silk {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf7 60%, #fdf4e4 100%);
+    border: 1px solid rgba(232, 146, 176, 0.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(178, 60, 98, 0.1),
+      0 3px 10px -3px rgba(107, 29, 58, 0.14);
+  }
+
+  .btn-ivory-silk:hover {
+    background: linear-gradient(180deg, #fffdf9 0%, #fbe9f0 100%);
+  }
+
+  /* Official Google Sign-In Material Button */
+  .gsi-material-button {
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-appearance: none;
+    background-color: #ffffff;
+    background-image: none;
+    border: 1px solid #747775;
+    -webkit-border-radius: 20px;
+    border-radius: 20px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #1f1f1f;
+    cursor: pointer;
+    font-family: 'Roboto', arial, sans-serif;
+    font-size: 14px;
+    height: 40px;
+    letter-spacing: 0.25px;
+    outline: none;
+    overflow: hidden;
+    padding: 0 14px;
+    position: relative;
+    text-align: center;
+    -webkit-transition: background-color 0.218s, border-color 0.218s, box-shadow 0.218s;
+    transition: background-color 0.218s, border-color 0.218s, box-shadow 0.218s;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: auto;
+    max-width: 400px;
+    min-width: min-content;
+  }
+
+  .gsi-material-button .gsi-material-button-icon {
+    height: 20px;
+    margin-right: 12px;
+    min-width: 20px;
+    width: 20px;
+  }
+
+  .gsi-material-button .gsi-material-button-content-wrapper {
+    -webkit-align-items: center;
+    align-items: center;
+    display: flex;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+    -webkit-flex-wrap: nowrap;
+    flex-wrap: nowrap;
+    height: 100%;
+    justify-content: space-between;
+    position: relative;
+    width: 100%;
+  }
+
+  .gsi-material-button .gsi-material-button-contents {
+    -webkit-flex-grow: 1;
+    flex-grow: 1;
+    font-family: 'Roboto', arial, sans-serif;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+  }
+
+  .gsi-material-button .gsi-material-button-state {
+    -webkit-transition: opacity 0.218s;
+    transition: opacity 0.218s;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  .gsi-material-button:disabled {
+    cursor: default;
+    background-color: #ffffff61;
+    border-color: #1f1f1f1f;
+  }
+
+  .gsi-material-button:not(:disabled):active .gsi-material-button-state,
+  .gsi-material-button:not(:disabled):focus .gsi-material-button-state {
+    background-color: #303030;
+    opacity: 12%;
+  }
+
+  .gsi-material-button:not(:disabled):hover {
+    -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  }
+}
+
+/* Lively Meadow Grass & Wildflower Breeze Animations */
+@keyframes grassSwayA {
+  0%,
+  100% {
+    transform: rotate(-3.5deg) skewX(-1.5deg);
+  }
+  50% {
+    transform: rotate(4.2deg) skewX(2deg);
+  }
+}
+
+@keyframes grassSwayB {
+  0%,
+  100% {
+    transform: rotate(3deg) skewX(1.5deg);
+  }
+  45% {
+    transform: rotate(-4.5deg) skewX(-2deg);
+  }
+  75% {
+    transform: rotate(1.5deg) skewX(0.5deg);
+  }
+}
+
+@keyframes grassSwayC {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(3.2deg) translateY(-1.5px);
+  }
+}
+
+@keyframes meadowFlutter {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-4deg);
+  }
+  35% {
+    transform: translate3d(14px, -7px, 0) rotate(5deg);
+  }
+  70% {
+    transform: translate3d(-8px, -4px, 0) rotate(-6deg);
+  }
+}
+
+.animate-grass-sway-a {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: grassSwayA 3.8s ease-in-out infinite;
+}
+
+.animate-grass-sway-b {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: grassSwayB 4.4s ease-in-out -1.3s infinite;
+}
+
+.animate-grass-sway-c {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: grassSwayC 3.2s ease-in-out -0.7s infinite;
+}
+
+.animate-meadow-flutter {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: meadowFlutter 5.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-petal,
+  .animate-butterfly,
+  .animate-butterfly-reverse,
+  .animate-wing,
+  .animate-sway,
+  .animate-digit-roll,
+  .animate-letter-reveal,
+  .animate-heart-seal-reveal,
+  .animate-closing-cta-reveal,
+  .animate-envelope-beckon,
+  .animate-seal-beckon,
+  .animate-lily-sway,
+  .animate-lily-float,
+  .animate-lily-bloom,
+  .animate-lily-twist,
+  .animate-sparkle-pop,
+  .animate-grass-sway-a,
+  .animate-grass-sway-b,
+  .animate-grass-sway-c,
+  .animate-meadow-flutter,
+  .page-stage-enter,
+  .page-stage-exit,
+  .veil-crest-pop {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}

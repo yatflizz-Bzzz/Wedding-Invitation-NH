@@ -1,0 +1,41 @@
+[
+  {
+    "id": "seed-1",
+    "fullName": "Puan Mariam & Keluarga",
+    "phone": "012-3849201",
+    "email": "",
+    "side": "bride",
+    "status": "attending",
+    "guestCount": 4,
+    "sessionTime": "11:00 PAGI - Ketibaan Tetamu",
+    "dietaryNotes": "",
+    "wishes": "Semoga ikatan perkahwinan Nabilah & Hidayat diberkati Allah SWT hingga ke Jannah. Selamat pengantin baru!",
+    "createdAt": "2026-11-14T09:30:00.000Z"
+  },
+  {
+    "id": "seed-2",
+    "fullName": "Farhana Azmi",
+    "phone": "019-7412890",
+    "email": "farhana@example.com",
+    "side": "friend",
+    "status": "attending",
+    "guestCount": 2,
+    "sessionTime": "12:45 TENGAH HARI - Perarakan Pengantin",
+    "dietaryNotes": "",
+    "wishes": "Teruja untuk meraikan hari bahagia kalian dalam tema pastel! Semoga bahagia kekal abadi.",
+    "createdAt": "2026-11-15T14:15:00.000Z"
+  },
+  {
+    "id": "seed-3",
+    "fullName": "Encik Razak & Puan Salma",
+    "phone": "013-9024418",
+    "email": "",
+    "side": "groom",
+    "status": "attending",
+    "guestCount": 2,
+    "sessionTime": "11:00 PAGI - Ketibaan Tetamu",
+    "dietaryNotes": "Tiada makanan laut",
+    "wishes": "Barakallahu lakuma wa baraka alaikuma. Semoga rumah tangga sentiasa dilimpahi sakinah, mawaddah dan rahmah.",
+    "createdAt": "2026-11-16T04:10:00.000Z"
+  }
+]
