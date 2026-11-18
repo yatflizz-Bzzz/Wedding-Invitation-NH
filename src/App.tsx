@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { Analytics } from '@vercel/analytics/react';
 import { Film, X } from 'lucide-react';
 import { EnvelopeHero } from './components/EnvelopeHero';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -296,6 +297,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
