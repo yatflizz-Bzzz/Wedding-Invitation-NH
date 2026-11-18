@@ -1,16 +1,14 @@
 import React from 'react';
 import {
-  CalendarPlus,
-  Check,
-  Database,
-  ExternalLink,
+  import {
+  ArrowLeft,
   Heart,
-  RotateCcw,
-  Sparkles,
+  Loader2,
+  Send,
+  Star,
+  Users,
 } from 'lucide-react';
-import {
-  CardFlowerCorners,
-  TwoCatsIllustration,
+import { RsvpConfirmationPage } from './RsvpConfirmationPage';
 } from './BotanicalDecor';
 import { WEDDING_DETAILS } from '../data/weddingData';
 import { buildIcsContent, type RsvpRecord } from '../utils/wedding';
