@@ -7,74 +7,106 @@ import {
   type Unsubscribe,
   type User,
 } from 'firebase/auth';
+import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-
-export const GOOGLE_SHEETS_SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/drive.file',
-] as const;
+import { ORGANIZER_EMAIL } from './wedding';
 
 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+export const auth = getAuth(app);
+// CRITICAL: Pass firestoreDatabaseId so Firestore Enterprise target database resolves properly.
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 const provider = new GoogleAuthProvider();
-for (const scope of GOOGLE_SHEETS_SCOPES) {
-  provider.addScope(scope);
-}
 provider.setCustomParameters({
-  prompt: 'consent',
-  include_granted_scopes: 'true',
+  prompt: 'select_account',
 });
 
-let isSigningIn = false;
-// In-memory only: never persist access tokens in localStorage or sessionStorage.
-let cachedAccessToken: string | null = null;
-
-export function initAuth(
-  onAuthSuccess?: (user: User, token: string) => void,
-  onAuthFailure?: () => void,
-  onSignedInWithoutToken?: (user: User) => void
-): Unsubscribe {
-  return onAuthStateChanged(auth, (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        onAuthSuccess?.(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        cachedAccessToken = null;
-        onSignedInWithoutToken?.(user);
-        onAuthFailure?.();
-      }
-    } else {
-      cachedAccessToken = null;
-      onAuthFailure?.();
-    }
-  });
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
 }
 
-export async function googleSignIn(): Promise<{ user: User; accessToken: string }> {
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo:
+        auth.currentUser?.providerData?.map((p) => ({
+          providerId: p.providerId,
+          email: p.email,
+        })) || [],
+    },
+    operationType,
+    path,
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+let connectionTested = false;
+export async function testFirestoreConnection(): Promise<void> {
+  if (connectionTested) return;
+  connectionTested = true;
   try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Tidak dapat memperoleh token akses Google daripada pengesahan.');
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error('Please check your Firebase configuration.');
     }
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } finally {
-    isSigningIn = false;
   }
 }
 
-export async function getAccessToken(): Promise<string | null> {
-  return cachedAccessToken;
+export function isVerifiedOrganizerUser(user: User | null): boolean {
+  return Boolean(
+    user &&
+      user.email?.toLowerCase() === ORGANIZER_EMAIL.toLowerCase() &&
+      user.emailVerified === true
+  );
 }
 
-export function getCurrentFirebaseUser(): User | null {
-  return auth.currentUser;
+export function initOrganizerAuth(
+  onAuthChange: (user: User | null, authReady: boolean) => void
+): Unsubscribe {
+  return onAuthStateChanged(auth, (user: User | null) => {
+    onAuthChange(user, true);
+  });
+}
+
+export async function signInWithGoogle(): Promise<User> {
+  const result = await signInWithPopup(auth, provider);
+  return result.user;
 }
 
 export async function logout(): Promise<void> {
   await auth.signOut();
-  cachedAccessToken = null;
 }

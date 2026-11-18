@@ -1,0 +1,213 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny Catch-All (Safety Net)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Shared Hardened Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 4 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedOrganizer() {
+      return isSignedIn()
+        && request.auth.token.email == 'mnorhidayat2000@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isBootstrappedOrganizer()
+        || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidSide(side) {
+      return side is string && side.size() <= 16 && side in ['bride', 'groom', 'friend', 'colleague'];
+    }
+
+    function isValidAttendanceStatus(status) {
+      return status is string && status.size() <= 16 && status in ['attending', 'declining'];
+    }
+
+    function isValidGuestCount(status, guestCount) {
+      return guestCount is int
+        && ((status == 'attending' && guestCount >= 1 && guestCount <= 6)
+          || (status == 'declining' && guestCount == 0));
+    }
+
+    function isValidFeedbackRating(rating) {
+      return rating is int && rating >= 0 && rating <= 5;
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidPublicWish(data, docId) {
+      return data.keys().hasAll([
+          'id', 'fullName', 'side', 'status', 'guestCount',
+          'sessionTime', 'wishes', 'feedbackRating', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'fullName', 'side', 'status', 'guestCount',
+          'sessionTime', 'wishes', 'feedbackRating', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.id == docId
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 80
+        && isValidSide(data.side)
+        && isValidAttendanceStatus(data.status)
+        && isValidGuestCount(data.status, data.guestCount)
+        && data.sessionTime is string && data.sessionTime.size() <= 64
+        && data.wishes is string && data.wishes.size() <= 400
+        && isValidFeedbackRating(data.feedbackRating)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidPrivateRsvp(data, docId) {
+      return data.keys().hasAll([
+          'id', 'fullName', 'phone', 'email', 'side', 'status', 'guestCount',
+          'sessionTime', 'dietaryNotes', 'wishes', 'feedbackRating',
+          'feedbackComment', 'checkedIn', 'organizerNotes', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'fullName', 'phone', 'email', 'side', 'status', 'guestCount',
+          'sessionTime', 'dietaryNotes', 'wishes', 'feedbackRating',
+          'feedbackComment', 'checkedIn', 'organizerNotes', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == docId
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 80
+        && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 24
+        && data.email is string && data.email.size() <= 120
+        && isValidSide(data.side)
+        && isValidAttendanceStatus(data.status)
+        && isValidGuestCount(data.status, data.guestCount)
+        && data.sessionTime is string && data.sessionTime.size() <= 64
+        && data.dietaryNotes is string && data.dietaryNotes.size() <= 160
+        && data.wishes is string && data.wishes.size() <= 400
+        && isValidFeedbackRating(data.feedbackRating)
+        && data.feedbackComment is string && data.feedbackComment.size() <= 400
+        && data.checkedIn is bool
+        && data.organizerNotes is string && data.organizerNotes.size() <= 300
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminProfile(data, adminUid) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'role', 'createdAt'])
+        && isValidId(data.uid)
+        && data.uid == adminUid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.role == 'admin'
+        && data.createdAt is timestamp;
+    }
+
+    // --- Collection: public_wishes (Zero PII, publicly readable guestbook & counts) ---
+    match /public_wishes/{rsvpId} {
+      allow get: if isValidId(rsvpId);
+      allow list: if resource.data.status in ['attending', 'declining']
+        && request.query.limit <= 500;
+
+      allow create: if isValidId(rsvpId)
+        && isValidPublicWish(incoming(), rsvpId)
+        && incoming().createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId))
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.id == incoming().id
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.fullName == incoming().fullName
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.side == incoming().side
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.status == incoming().status
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.guestCount == incoming().guestCount
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.sessionTime == incoming().sessionTime
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.wishes == incoming().wishes
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.feedbackRating == incoming().feedbackRating
+        && getAfter(/databases/$(database)/documents/rsvp_submissions/$(rsvpId)).data.createdAt == incoming().createdAt;
+
+      allow update: if isAdmin()
+        && isValidId(rsvpId)
+        && isValidPublicWish(incoming(), rsvpId)
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'fullName', 'side', 'status', 'guestCount', 'sessionTime', 'wishes', 'feedbackRating'
+        ]);
+
+      allow delete: if isAdmin() && isValidId(rsvpId);
+    }
+
+    // --- Collection: rsvp_submissions (Contains PII & feedback, strictly organizer-only read/manage) ---
+    match /rsvp_submissions/{rsvpId} {
+      allow get: if isAdmin() && isValidId(rsvpId);
+      // No get()/exists() DB calls allowed inside list rules (Cost-Optimization Clause)
+      allow list: if isBootstrappedOrganizer();
+
+      allow create: if isValidId(rsvpId)
+        && isValidPrivateRsvp(incoming(), rsvpId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().checkedIn == false
+        && incoming().organizerNotes == ''
+        && existsAfter(/databases/$(database)/documents/public_wishes/$(rsvpId))
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.id == incoming().id
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.fullName == incoming().fullName
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.side == incoming().side
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.status == incoming().status
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.guestCount == incoming().guestCount
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.sessionTime == incoming().sessionTime
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.wishes == incoming().wishes
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.feedbackRating == incoming().feedbackRating
+        && getAfter(/databases/$(database)/documents/public_wishes/$(rsvpId)).data.createdAt == incoming().createdAt;
+
+      allow update: if isAdmin()
+        && isValidId(rsvpId)
+        && isValidPrivateRsvp(incoming(), rsvpId)
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Organizer Check-In & Notes Update
+          incoming().diff(existing()).affectedKeys().hasOnly(['checkedIn', 'organizerNotes', 'updatedAt'])
+          ||
+          // Action 2: Full Admin Correction
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'phone', 'email', 'side', 'status', 'guestCount',
+            'sessionTime', 'dietaryNotes', 'wishes', 'feedbackRating',
+            'feedbackComment', 'checkedIn', 'organizerNotes', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isAdmin() && isValidId(rsvpId);
+    }
+
+    // --- Collection: admins (Organizer role lookup) ---
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isBootstrappedOrganizer());
+      allow list: if isBootstrappedOrganizer();
+      allow create: if isBootstrappedOrganizer()
+        && isValidId(adminUid)
+        && isValidAdminProfile(incoming(), adminUid)
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isBootstrappedOrganizer() && isValidId(adminUid);
+    }
+
+    // --- Connection health probe doc (empty, read-only single get) ---
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+      allow list, write: if false;
+    }
+  }
+}

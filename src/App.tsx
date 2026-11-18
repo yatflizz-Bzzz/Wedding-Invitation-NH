@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import type { User } from 'firebase/auth';
 import { Film, X } from 'lucide-react';
 import { EnvelopeHero } from './components/EnvelopeHero';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { FloatingPetals } from './components/FloatingPetals';
 import { Header, type ActivePage } from './components/Header';
 import { InvitationSections } from './components/InvitationSections';
 import { MusicPlayer } from './components/MusicPlayer';
 import { RsvpPage } from './components/RsvpPage';
 import { WEDDING_DETAILS } from './data/weddingData';
-import { loadRsvpsWithFallback } from './utils/rsvpStorage';
+import { initOrganizerAuth, testFirestoreConnection } from './utils/firebaseAuth';
+import { subscribePublicWishes } from './utils/firestoreRsvp';
 import type { RsvpRecord } from './utils/wedding';
 
 function getInitialRoute(): { page: ActivePage; autostart: boolean } {
@@ -28,6 +31,8 @@ export default function App() {
   const [rsvps, setRsvps] = useState<RsvpRecord[]>([]);
   const [isLoadingRsvps, setIsLoadingRsvps] = useState<boolean>(true);
   const [rsvpLoadError, setRsvpLoadError] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState<boolean>(false);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
   const transitionTimersRef = React.useRef<number[]>([]);
 
@@ -51,22 +56,31 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showVideoModal]);
 
-  const loadRsvps = useCallback(async () => {
-    setIsLoadingRsvps(true);
-    setRsvpLoadError(null);
-    try {
-      const list = await loadRsvpsWithFallback();
-      setRsvps(list);
-    } catch {
-      setRsvpLoadError('Tidak dapat memuatkan ucapan tetamu buat masa ini.');
-    } finally {
-      setIsLoadingRsvps(false);
-    }
+  useEffect(() => {
+    void testFirestoreConnection();
+    const unsubAuth = initOrganizerAuth((user, ready) => {
+      setAuthUser(user);
+      setAuthReady(ready);
+    });
+    return () => unsubAuth();
   }, []);
 
   useEffect(() => {
-    loadRsvps();
-  }, [loadRsvps]);
+    if (!authReady) return;
+    setIsLoadingRsvps(true);
+    setRsvpLoadError(null);
+    const unsubWishes = subscribePublicWishes(
+      (records) => {
+        setRsvps(records);
+        setIsLoadingRsvps(false);
+      },
+      (msg) => {
+        setRsvpLoadError(msg);
+        setIsLoadingRsvps(false);
+      }
+    );
+    return () => unsubWishes();
+  }, [authReady]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -192,23 +206,31 @@ export default function App() {
               : ''
         }`}
       >
-        {activePage === 'invitation' ? (
-          <>
-            <EnvelopeHero
-              initialOpen={initial.autostart}
-              onGoToRsvp={() => handleNavigatePage('rsvp')}
+        <ErrorBoundary>
+          {activePage === 'invitation' ? (
+            <>
+              <EnvelopeHero
+                initialOpen={initial.autostart}
+                onGoToRsvp={() => handleNavigatePage('rsvp')}
+              />
+              <InvitationSections onGoToRsvp={() => handleNavigatePage('rsvp')} />
+            </>
+          ) : (
+            <RsvpPage
+              rsvps={rsvps}
+              isLoading={isLoadingRsvps}
+              loadError={rsvpLoadError}
+              authUser={authUser}
+              authReady={authReady}
+              onRsvpSubmitted={(created) =>
+                setRsvps((prev) =>
+                  prev.some((item) => item.id === created.id) ? prev : [created, ...prev]
+                )
+              }
+              onBackToInvitation={() => handleNavigatePage('invitation', 'hero-invitation')}
             />
-            <InvitationSections onGoToRsvp={() => handleNavigatePage('rsvp')} />
-          </>
-        ) : (
-          <RsvpPage
-            rsvps={rsvps}
-            isLoading={isLoadingRsvps}
-            loadError={rsvpLoadError}
-            onRsvpSubmitted={(updatedList) => setRsvps(updatedList)}
-            onBackToInvitation={() => handleNavigatePage('invitation', 'hero-invitation')}
-          />
-        )}
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Pengaki */}

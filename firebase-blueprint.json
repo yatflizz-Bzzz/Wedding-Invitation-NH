@@ -1,0 +1,220 @@
+{
+  "entities": {
+    "PublicWish": {
+      "title": "PublicWish",
+      "description": "Publicly visible guest attendance summary and wedding wishes without any personally identifiable contact details.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique document ID matching the paired private RSVP submission."
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Guest display name shown on the public wishes wall."
+        },
+        "side": {
+          "type": "string",
+          "enum": ["bride", "groom", "friend", "colleague"],
+          "maxLength": 16,
+          "description": "Which wedding party side the guest represents."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["attending", "declining"],
+          "maxLength": 16,
+          "description": "Attendance response status."
+        },
+        "guestCount": {
+          "type": "integer",
+          "description": "Confirmed pax count (1 to 6 when attending, 0 when declining)."
+        },
+        "sessionTime": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Preferred arrival slot for attending guests."
+        },
+        "wishes": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Wedding blessing or message for the couple."
+        },
+        "feedbackRating": {
+          "type": "integer",
+          "description": "Optional visitor experience rating from 1 to 5 (0 if unrated)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp enforced via request.time."
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "side",
+        "status",
+        "guestCount",
+        "sessionTime",
+        "wishes",
+        "feedbackRating",
+        "createdAt"
+      ]
+    },
+    "PrivateRsvpSubmission": {
+      "title": "PrivateRsvpSubmission",
+      "description": "Full organizer-only RSVP, visitor feedback, and contact details (PII isolated from public reads).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique RSVP submission ID synchronized with public_wishes."
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 24,
+          "description": "Guest phone or WhatsApp number (PII)."
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Optional guest email address (PII)."
+        },
+        "side": {
+          "type": "string",
+          "enum": ["bride", "groom", "friend", "colleague"],
+          "maxLength": 16
+        },
+        "status": {
+          "type": "string",
+          "enum": ["attending", "declining"],
+          "maxLength": 16
+        },
+        "guestCount": {
+          "type": "integer",
+          "description": "Confirmed pax count (1 to 6 when attending, 0 when declining)."
+        },
+        "sessionTime": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "dietaryNotes": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Dietary restrictions or special accommodation notes."
+        },
+        "wishes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "feedbackRating": {
+          "type": "integer",
+          "description": "Visitor rating (0 if not provided, 1 to 5 stars)."
+        },
+        "feedbackComment": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Private visitor feedback or suggestions for the host."
+        },
+        "checkedIn": {
+          "type": "boolean",
+          "description": "Organizer arrival / follow-up check-in status."
+        },
+        "organizerNotes": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Organizer tracking notes (table number, follow-up reminder)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp updated on organizer changes."
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "phone",
+        "email",
+        "side",
+        "status",
+        "guestCount",
+        "sessionTime",
+        "dietaryNotes",
+        "wishes",
+        "feedbackRating",
+        "feedbackComment",
+        "checkedIn",
+        "organizerNotes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminProfile": {
+      "title": "AdminProfile",
+      "description": "Trusted organizer accounts allowed to manage private RSVP submissions.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/public_wishes/{rsvpId}": {
+      "schema": {
+        "$ref": "#/entities/PublicWish"
+      },
+      "description": "Public guestbook wishes and non-PII attendance counts atomically created alongside each RSVP."
+    },
+    "/rsvp_submissions/{rsvpId}": {
+      "schema": {
+        "$ref": "#/entities/PrivateRsvpSubmission"
+      },
+      "description": "Private organizer-only RSVP submissions containing PII, visitor feedback, and check-in tracking."
+    },
+    "/admins/{adminUid}": {
+      "schema": {
+        "$ref": "#/entities/AdminProfile"
+      },
+      "description": "Organizer admin directory."
+    }
+  }
+}
