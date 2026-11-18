@@ -260,6 +260,7 @@ export function InvitationSections({ onGoToRsvp }: InvitationSectionsProps) {
               className="font-hero-swash text-[22px] sm:text-3xl font-bold tracking-[0.06em] uppercase text-[#4e1228] leading-[1.12] flex flex-col items-center gap-0.5"
             >
               <span className="block">{WEDDING_DETAILS.bride}</span>
+              <span className=“my-0.5 sm:my-1 inline-flex items-center justify-center gap-2.5”>
               <span className="block">{WEDDING_DETAILS.groom}</span>
             </h2>
             <p className="mt-1 sm:mt-2 font-display text-xs sm:text-sm font-semibold text-[#4e1228] tracking-wider uppercase">
