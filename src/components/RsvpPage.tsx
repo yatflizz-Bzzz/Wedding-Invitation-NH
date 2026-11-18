@@ -2,15 +2,13 @@ import React, { useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   ArrowLeft,
-  CheckCircle2,
-  Database,
   Heart,
   Loader2,
   Send,
   Star,
   Users,
 } from 'lucide-react';
-import {
+import { RsvpConfirmationPage } from './RsvpConfirmationPage';
   CardFlowerCorners,
   MeadowFlowerBorder,
   SwirledMonogram,
@@ -98,14 +96,13 @@ export function RsvpPage({
         next.guestCount = 1;
       }
       return next;
-    });
-    if (field in errors) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    setSubmitError(null);
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
+          const payload = normalizeRsvpPayload(form);
+      const created = await submitRsvpToFirestore(payload);
+      onRsvpSubmitted(created);
+      setSubmittedRecord(created);
+      setForm(INITIAL_FORM);
+      setErrors({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     event.preventDefault();
     const validationErrors = validateRsvpForm(form);
     if (Object.keys(validationErrors).length > 0) {
