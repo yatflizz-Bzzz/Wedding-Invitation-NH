@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   CalendarPlus,
   Check,
@@ -7,12 +8,14 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
-import {
-  CardFlowerCorners,
-  TwoCatsIllustration,
-} from './BotanicalDecor';
+import { CardFlowerCorners } from './BotanicalDecor';
 import { WEDDING_DETAILS } from '../data/weddingData';
-import { buildIcsContent, type RsvpRecord } from '../utils/wedding';
+import {
+  buildIcsContent,
+  calculateCountdown,
+  padTwoDigits,
+  type RsvpRecord,
+} from '../utils/wedding';
 
 interface RsvpConfirmationPageProps {
   record: RsvpRecord;
@@ -88,7 +91,15 @@ export function RsvpConfirmationPage({
   onBackToInvitation,
   onSubmitAnother,
 }: RsvpConfirmationPageProps) {
+  const [countdown, setCountdown] = useState(() => calculateCountdown(Date.now()));
   const isAttending = record.status === 'attending';
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCountdown(calculateCountdown(Date.now()));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const handleDownloadIcs = () => {
     const ics = buildIcsContent();
@@ -207,13 +218,13 @@ export function RsvpConfirmationPage({
         }
       `}</style>
 
-      <div className="paper-baru-rose-card relative mx-auto w-full aspect-[945/1377] px-7 pt-7 pb-9 sm:px-13 sm:pt-12 sm:pb-14 text-center flex flex-col justify-center">
+      <div className="paper-baru-rose-card relative mx-auto w-full aspect-[945/1377] px-6 pt-5 pb-6 sm:px-12 sm:pt-10 sm:pb-12 text-center flex flex-col justify-center">
         <CardFlowerCorners variant="lg" />
         <CuteMiniFireworks />
 
         <div className="relative z-10 mx-auto w-full max-w-md my-auto">
           <div className="animate-thankyou-pop">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#f2c8da] bg-[#fdf4f8]/95 px-3 py-0.5 text-[10.5px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-[#b23c62] mb-1 shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#f2c8da] bg-[#fdf4f8]/95 px-3 py-0.5 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-[#b23c62] mb-0.5 shadow-2xs">
               <Sparkles className="h-3 w-3 animate-pulse" />
               <span>RSVP Berjaya Disahkan</span>
               <Sparkles className="h-3 w-3 animate-pulse" />
@@ -221,74 +232,120 @@ export function RsvpConfirmationPage({
 
             <h1
               id="rsvp-thankyou-heading"
-              className="font-script text-[30px] sm:text-[42px] text-[#4e1228] leading-tight animate-gentle-float"
+              className="font-script text-[26px] sm:text-[38px] text-[#4e1228] leading-tight animate-gentle-float"
             >
               Terima Kasih
             </h1>
-            <p className="font-display text-[11px] sm:text-sm font-bold uppercase tracking-[0.15em] text-[#b23c62] -mt-0.5">
+            <p className="font-display text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] text-[#b23c62] -mt-0.5">
               Atas Maklum Balas Anda
             </p>
           </div>
 
-          <div className="flex justify-center my-1 sm:my-2.5 animate-fade-up-1">
+          <div className="flex justify-center my-1 sm:my-2 animate-fade-up-1">
             <img
               src="/assets/ribbon-doves.png"
               alt=""
               aria-hidden="true"
               referrerPolicy="no-referrer"
-              className="w-20 sm:w-36 h-auto object-contain"
+              className="w-16 sm:w-32 h-auto object-contain"
             />
           </div>
 
-          <h2 className="font-hero-swash text-[19px] sm:text-[26px] font-bold tracking-[0.06em] uppercase text-[#4e1228] leading-[1.1] flex flex-col items-center gap-0.5 animate-fade-up-1">
+          <h2 className="font-hero-swash text-[17px] sm:text-[24px] font-bold tracking-[0.06em] uppercase text-[#4e1228] leading-[1.06] flex flex-col items-center gap-0.5 animate-fade-up-1">
             <span className="block">{WEDDING_DETAILS.bride}</span>
             <span className="block">&amp;</span>
             <span className="block">{WEDDING_DETAILS.groom}</span>
           </h2>
 
-          <div className="mt-2 sm:mt-4 mx-auto max-w-xs sm:max-w-sm rounded-2xl sm:rounded-3xl border border-[#f2c8da] bg-gradient-to-br from-[#fdf4f8] via-[#ffffff] to-[#fdf6df] px-3.5 py-2.5 sm:px-5 sm:py-4 shadow-xs animate-fade-up-2">
-            <div className="mx-auto mb-1 flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#6b1d3a] text-[#fffdf7] shadow-xs">
-              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          {/* Maklumat Pengesahan Tetamu (Tanpa Kotak Latar Belakang & Tanpa Kucing) */}
+          <div className="mt-1.5 sm:mt-2.5 mx-auto max-w-[285px] sm:max-w-sm animate-fade-up-2">
+            <div className="inline-flex items-center justify-center gap-1.5">
+              <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#6b1d3a] text-[#fffdf7] shadow-2xs">
+                <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              </span>
+              <p className="font-display text-xs sm:text-sm font-bold text-[#4e1228]">
+                {record.fullName}
+              </p>
             </div>
 
-            <p className="font-display text-xs sm:text-sm font-bold text-[#4e1228]">
-              {record.fullName}
-            </p>
-
-            <p className="mt-0.5 text-[11.5px] sm:text-[13.5px] text-[#4e1228] leading-snug sm:leading-relaxed">
+            <p className="mt-0.5 text-[11px] sm:text-[13px] text-[#4e1228] leading-snug">
               {isAttending
                 ? `Kehadiran untuk ${record.guestCount} tetamu (${record.sessionTime}) telah berjaya direkodkan.`
                 : 'Terima kasih atas ingatan dan doa restu tulus anda buat kami berdua dari jauh.'}
             </p>
 
-            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#fdf4d7] border border-[#e892b0]/50 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-[#4e6b38]">
-              <Database className="h-3 w-3" />
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#fdf4d7]/90 border border-[#e892b0]/50 px-2.5 py-0.5 text-[9.5px] sm:text-[11px] font-medium text-[#4e6b38]">
+              <Database className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               <span>Tersimpan ke Pangkalan Data Majlis</span>
             </p>
+          </div>
 
-            <div className="mt-1.5 sm:mt-2.5 flex justify-center">
-              <TwoCatsIllustration className="w-16 h-10 sm:w-28 sm:h-18" />
+          {/* Countdown Panel dari Section 2 */}
+          <div className="mt-2 sm:mt-3 mx-auto max-w-[290px] sm:max-w-sm rounded-2xl sm:rounded-3xl border border-[#f2c8da] bg-gradient-to-br from-[#fdf4f8] via-[#ffffff] to-[#fdf6df] px-3 py-1.5 sm:px-5 sm:py-3.5 shadow-xs relative animate-fade-up-2">
+            <p className="font-display text-[10px] sm:text-xs tracking-[0.16em] uppercase text-[#4e1228] mb-1 sm:mb-2 font-semibold">
+              Menghitung Hari Bahagia
+            </p>
+
+            <div
+              className="grid grid-cols-4 gap-0.5 sm:gap-1.5 items-start text-[#d46f94]"
+              aria-live="polite"
+            >
+              {[
+                { label: 'Hari', value: padTwoDigits(countdown.days) },
+                { label: 'Jam', value: padTwoDigits(countdown.hours) },
+                { label: 'Minit', value: padTwoDigits(countdown.minutes) },
+                { label: 'Saat', value: padTwoDigits(countdown.seconds) },
+              ].map((unit, idx) => (
+                <div
+                  key={unit.label}
+                  className="relative flex flex-col items-center justify-center py-0.5"
+                >
+                  <p className="font-countdown-num text-xl sm:text-3xl font-semibold leading-none tabular-nums text-[#c45b82] inline-flex items-center justify-center">
+                    {unit.value.split('').map((digit, dIdx) => (
+                      <span
+                        key={`${dIdx}-${digit}`}
+                        className="inline-block overflow-y-hidden px-[1.5px] h-[1.12em] leading-[1.12em]"
+                      >
+                        <span className="inline-block animate-digit-roll">
+                          {digit}
+                        </span>
+                      </span>
+                    ))}
+                  </p>
+                  {idx < 3 && (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-1 sm:-right-1.5 top-0 font-countdown-num text-lg sm:text-2xl font-medium leading-none text-[#c45b82]/85"
+                    >
+                      :
+                    </span>
+                  )}
+                  <p className="mt-0.5 sm:mt-1 font-countdown-label text-[10px] sm:text-xs font-normal uppercase tracking-[0.06em] text-[#b23c62]">
+                    {unit.label}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-2.5 sm:mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 animate-fade-up-2">
+          <div className="mt-2 sm:mt-3.5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 animate-fade-up-2">
             {isAttending && (
               <>
                 <button
                   type="button"
                   onClick={handleDownloadIcs}
-                  className="btn-butter-silk inline-flex items-center gap-1 rounded-full px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-[#4e1228] transition-all duration-200 active:scale-95 cursor-pointer"
+                  className="btn-butter-silk inline-flex items-center gap-1 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-semibold text-[#4e1228] transition-all duration-200 active:scale-95 cursor-pointer"
                 >
-                  <CalendarPlus className="h-3.5 w-3.5" />
+                  <CalendarPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   <span>Kalendar (.ics)</span>
                 </button>
                 <a
                   href={WEDDING_DETAILS.googleCalendarUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-ivory-silk inline-flex items-center gap-1 rounded-full px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-[#591d36] transition-all duration-200 active:scale-95"
+                  className="btn-ivory-silk inline-flex items-center gap-1 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-semibold text-[#591d36] transition-all duration-200 active:scale-95"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   <span>Google Calendar</span>
                 </a>
               </>
@@ -297,18 +354,18 @@ export function RsvpConfirmationPage({
             <button
               type="button"
               onClick={onBackToInvitation}
-              className="btn-plum-silk inline-flex items-center gap-1.5 rounded-full px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-[#fffdf7] transition-all duration-200 active:scale-95 cursor-pointer"
+              className="btn-plum-silk inline-flex items-center gap-1.5 rounded-full px-3.5 sm:px-4 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-semibold text-[#fffdf7] transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              <Heart className="h-3.5 w-3.5 fill-current" />
+              <Heart className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current" />
               <span>Kembali ke Jemputan</span>
             </button>
 
             <button
               type="button"
               onClick={onSubmitAnother}
-              className="btn-ivory-silk inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] sm:text-xs font-medium text-[#591d36] transition-all duration-200 active:scale-95 cursor-pointer"
+              className="btn-ivory-silk inline-flex items-center gap-1 rounded-full px-3 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-medium text-[#591d36] transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               <span>Hantar RSVP Lain</span>
             </button>
           </div>
