@@ -1,19 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Film, X } from 'lucide-react';
+import { ArrowLeft, Film, X } from 'lucide-react';
 import { EnvelopeHero } from './components/EnvelopeHero';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FloatingPetals } from './components/FloatingPetals';
 import { Header, type ActivePage } from './components/Header';
 import { InvitationSections } from './components/InvitationSections';
 import { MusicPlayer } from './components/MusicPlayer';
+import { OrganizerTrackerPanel } from './components/OrganizerTrackerPanel';
 import { RsvpPage } from './components/RsvpPage';
 import { WEDDING_DETAILS } from './data/weddingData';
 import { initOrganizerAuth, testFirestoreConnection } from './utils/firebaseAuth';
 import { subscribePublicWishes } from './utils/firestoreRsvp';
 import type { RsvpRecord } from './utils/wedding';
 
-function getInitialRoute(): { page: ActivePage; autostart: boolean } {
+function checkIsAdminLocation(): boolean {
+  if (typeof window === 'undefined') return false;
+  const cleanPath = window.location.pathname.replace(/\/+$/, '');
+  const hash = window.location.hash;
+  return cleanPath === '/admin' || hash === '#/admin' || hash === '#admin';
+}
+
+function getInitialRoute(): { page: ActivePage; autostart: boolean; isAdmin: boolean } {
   const params = new URLSearchParams(window.location.search);
   const autostart = params.get('autostart') === '1';
   const isRsvpPath = window.location.pathname.replace(/\/+$/, '') === '/rsvp';
@@ -21,12 +29,14 @@ function getInitialRoute(): { page: ActivePage; autostart: boolean } {
   return {
     page: isRsvpPath || isRsvpHash ? 'rsvp' : 'invitation',
     autostart,
+    isAdmin: checkIsAdminLocation(),
   };
 }
 
 export default function App() {
   const initial = getInitialRoute();
   const [activePage, setActivePage] = useState<ActivePage>(initial.page);
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(initial.isAdmin);
   const [pagePhase, setPagePhase] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const [rsvps, setRsvps] = useState<RsvpRecord[]>([]);
   const [isLoadingRsvps, setIsLoadingRsvps] = useState<boolean>(true);
@@ -83,15 +93,24 @@ export default function App() {
   }, [authReady]);
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleLocationChange = () => {
+      if (checkIsAdminLocation()) {
+        setIsAdminRoute(true);
+        return;
+      }
+      setIsAdminRoute(false);
       if (window.location.hash === '#/rsvp' || window.location.hash === '#rsvp') {
         setActivePage('rsvp');
       } else if (window.location.hash === '' || window.location.hash === '#/') {
         setActivePage('invitation');
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleNavigatePage = (page: ActivePage, sectionId?: string) => {
@@ -102,7 +121,7 @@ export default function App() {
     const targetHash = page === 'rsvp' ? '/#/rsvp' : '/#/';
 
     // Same page smooth scroll (no cross-page veil needed)
-    if (page === activePage) {
+    if (!isAdminRoute && page === activePage) {
       window.history.replaceState(null, '', targetHash);
       if (sectionId) {
         const el = document.getElementById(sectionId);
@@ -118,6 +137,7 @@ export default function App() {
     // Instant switch for reduced-motion accessibility
     if (prefersReducedMotion) {
       window.history.replaceState(null, '', targetHash);
+      setIsAdminRoute(false);
       setActivePage(page);
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
       if (sectionId) {
@@ -134,6 +154,7 @@ export default function App() {
 
     const swapTimer = window.setTimeout(() => {
       window.history.replaceState(null, '', targetHash);
+      setIsAdminRoute(false);
       setActivePage(page);
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
       setPagePhase('entering');
@@ -197,7 +218,7 @@ export default function App() {
 
       {/* Main Content */}
       <main
-        key={activePage}
+        key={isAdminRoute ? 'admin' : activePage}
         className={`relative z-30 flex-1 ${
           pagePhase === 'exiting'
             ? 'page-stage-exit'
@@ -207,7 +228,27 @@ export default function App() {
         }`}
       >
         <ErrorBoundary>
-          {activePage === 'invitation' ? (
+          {isAdminRoute ? (
+            <div className="px-4 py-8 sm:px-8 sm:py-12">
+              <div className="mx-auto max-w-5xl">
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => handleNavigatePage('invitation', 'hero-invitation')}
+                    className="btn-ivory-silk inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#591d36] transition-all active:scale-95 cursor-pointer"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Kembali ke Jemputan</span>
+                  </button>
+                </div>
+                <OrganizerTrackerPanel
+                  publicRsvps={rsvps}
+                  authUser={authUser}
+                  authReady={authReady}
+                />
+              </div>
+            </div>
+          ) : activePage === 'invitation' ? (
             <>
               <EnvelopeHero
                 initialOpen={initial.autostart}
