@@ -62,7 +62,7 @@ const SIDE_LABELS: Record<GuestSide, string> = {
   colleague: 'Rakan Sekerja',
 };
 
-const ORGANIZER_SECRET_KEY = 'nh2712';
+const ORGANIZER_SECRET_KEY = 'BellYat123';
 const ORGANIZER_STORAGE_KEY = 'nh_organizer_access';
 
 export function RsvpPage({
