@@ -1,25 +1,60 @@
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  type Unsubscribe,
-  type User,
-} from 'firebase/auth';
-import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { createClient } from '@libsql/client/web';
 import { ORGANIZER_EMAIL } from './wedding';
 
-const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-// CRITICAL: Pass firestoreDatabaseId so Firestore Enterprise target database resolves properly.
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export type Unsubscribe = () => void;
 
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({
-  prompt: 'select_account',
-});
+export interface User {
+  uid: string;
+  email: string | null;
+  emailVerified: boolean;
+  displayName?: string | null;
+  photoURL?: string | null;
+  isAnonymous?: boolean;
+  tenantId?: string | null;
+  providerData?: {
+    providerId?: string | null;
+    email?: string | null;
+  }[];
+}
+
+const SESSION_STORAGE_KEY = 'wedding_organizer_session_v1';
+const DEFAULT_ADMIN_PIN = 'admin2026';
+
+function loadStoredUser(): User | null {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as User;
+    if (parsed && parsed.email) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+let currentUser: User | null = loadStoredUser();
+const authListeners = new Set<(user: User | null, authReady: boolean) => void>();
+
+function notifyAuthListeners(): void {
+  authListeners.forEach((listener) => {
+    try {
+      listener(currentUser, true);
+    } catch {
+      // Abaikan ralat listener individu
+    }
+  });
+}
+
+export const auth = {
+  get currentUser(): User | null {
+    return currentUser;
+  },
+  async signOut(): Promise<void> {
+    await logout();
+  },
+};
+
+export const db = null;
 
 export enum OperationType {
   CREATE = 'create',
@@ -55,21 +90,17 @@ export function handleFirestoreError(
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData?.map((p) => ({
-          providerId: p.providerId,
-          email: p.email,
-        })) || [],
+      userId: currentUser?.uid ?? null,
+      email: currentUser?.email ?? null,
+      emailVerified: currentUser?.emailVerified ?? false,
+      isAnonymous: false,
+      tenantId: null,
+      providerInfo: currentUser?.providerData || [],
     },
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.error('Database Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -77,12 +108,16 @@ let connectionTested = false;
 export async function testFirestoreConnection(): Promise<void> {
   if (connectionTested) return;
   connectionTested = true;
+
+  const tursoUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
+  const tursoToken = (import.meta.env.VITE_TURSO_AUTH_TOKEN || '').trim();
+  if (!tursoUrl) return;
+
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const client = createClient({ url: tursoUrl, authToken: tursoToken });
+    await client.execute('SELECT 1;');
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration.');
-    }
+    console.error('Sila semak tetapan VITE_TURSO_DATABASE_URL dan VITE_TURSO_AUTH_TOKEN.', error);
   }
 }
 
@@ -97,16 +132,49 @@ export function isVerifiedOrganizerUser(user: User | null): boolean {
 export function initOrganizerAuth(
   onAuthChange: (user: User | null, authReady: boolean) => void
 ): Unsubscribe {
-  return onAuthStateChanged(auth, (user: User | null) => {
-    onAuthChange(user, true);
-  });
+  onAuthChange(currentUser, true);
+  authListeners.add(onAuthChange);
+
+  return () => {
+    authListeners.delete(onAuthChange);
+  };
 }
 
 export async function signInWithGoogle(): Promise<User> {
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
+  const expectedPin = (import.meta.env.VITE_ADMIN_PIN || DEFAULT_ADMIN_PIN).trim();
+  const entered = window.prompt('Masukkan PIN Admin Penganjur:');
+
+  if (entered === null) {
+    throw new Error('Log masuk dibatalkan.');
+  }
+
+  if (entered.trim() !== expectedPin) {
+    window.alert('PIN Admin tidak sah.');
+    throw new Error('PIN Admin tidak sah.');
+  }
+
+  const verifiedOrganizer: User = {
+    uid: 'organizer-admin',
+    email: ORGANIZER_EMAIL,
+    emailVerified: true,
+    displayName: 'Admin Penganjur',
+    isAnonymous: false,
+    tenantId: null,
+    providerData: [{ providerId: 'admin-pin', email: ORGANIZER_EMAIL }],
+  };
+
+  currentUser = verifiedOrganizer;
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(verifiedOrganizer));
+  } catch {
+    // Abaikan jika localStorage disekat
+  }
+
+  notifyAuthListeners();
+  return verifiedOrganizer;
 }
 
 export async function logout(): Promise<void> {
-  await auth.signOut();
-}
+  currentUser = null;
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
