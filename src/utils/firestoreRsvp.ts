@@ -19,6 +19,8 @@ export type Unsubscribe = () => void;
 export const PUBLIC_WISHES_COLLECTION = 'public_wishes';
 export const PRIVATE_RSVPS_COLLECTION = 'rsvp_submissions';
 
+type DbRow = Record<string, unknown>;
+
 const LOCAL_CACHE_KEY = 'wedding_rsvp_turso_cache_v1';
 
 const tursoUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
@@ -29,7 +31,6 @@ const turso = createClient({
   authToken: tursoToken,
 });
 
-// Pendengar dalaman supaya UI dikemas kini serta-merta selepas hantar/ubah/padam
 const activeListeners = new Set<() => void>();
 
 function notifyListeners(): void {
@@ -63,7 +64,7 @@ function mapGuestSideToDb(side: GuestSide): string {
   }
 }
 
-function mapRowToPublicRecord(row: Record<string, unknown>): RsvpRecord {
+function mapRowToPublicRecord(row: DbRow): RsvpRecord {
   const rawStatus = String(row.attendance_status ?? '').trim();
   const isDeclining = rawStatus === 'Tidak Dapat Hadir' || rawStatus === 'declining';
   const createdAt =
@@ -88,7 +89,7 @@ function mapRowToPublicRecord(row: Record<string, unknown>): RsvpRecord {
   };
 }
 
-function mapRowToPrivateRecord(row: Record<string, unknown>): RsvpRecord {
+function mapRowToPrivateRecord(row: DbRow): RsvpRecord {
   const base = mapRowToPublicRecord(row);
   const checkinRaw = String(row.checkin_status ?? '').trim();
   const checkedIn =
@@ -110,7 +111,7 @@ function mapRowToPrivateRecord(row: Record<string, unknown>): RsvpRecord {
   };
 }
 
-async function fetchAllRowsFromTurso(): Promise<Record<string, unknown>[]> {
+async function fetchAllRowsFromTurso(): Promise<DbRow[]> {
   if (!tursoUrl) {
     throw new Error('VITE_TURSO_DATABASE_URL belum ditetapkan di Vercel.');
   }
@@ -119,4 +120,102 @@ async function fetchAllRowsFromTurso(): Promise<Record<string, unknown>[]> {
     'SELECT * FROM rsvp_responses ORDER BY submitted_at DESC;'
   );
 
-  const plainRows = result.rows.map((r) => ({ ...r })) as Record<string
+  const plainRows: DbRow[] = result.rows.map((r) => ({ ...r }));
+
+  try {
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(plainRows));
+  } catch {
+    // Abaikan jika storan pelayar penuh
+  }
+
+  return plainRows;
+}
+
+export async function submitRsvpToFirestore(input: RsvpFormInput): Promise<RsvpRecord> {
+  const id = generateFirestoreRsvpId();
+  const nowIso = new Date().toISOString();
+  const { privateRsvpDoc } = buildFirestoreRsvpBatchPayloads(id, input, nowIso);
+
+  const attendanceDb =
+    privateRsvpDoc.status === 'declining' ? 'Tidak Dapat Hadir' : 'Hadir';
+  const paxDb = privateRsvpDoc.status === 'attending' ? privateRsvpDoc.guestCount : 0;
+
+  await turso.execute({
+    sql: `
+      INSERT INTO rsvp_responses (
+        id, submitted_at, full_name, phone, email, guest_side,
+        attendance_status, pax, arrival_time, dietary_notes,
+        wishes, rating, feedback, checkin_status, organizer_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `,
+    args: [
+      id,
+      nowIso,
+      privateRsvpDoc.fullName,
+      privateRsvpDoc.phone || null,
+      privateRsvpDoc.email || null,
+      mapGuestSideToDb(privateRsvpDoc.side),
+      attendanceDb,
+      paxDb,
+      privateRsvpDoc.sessionTime || null,
+      privateRsvpDoc.dietaryNotes || null,
+      privateRsvpDoc.wishes || null,
+      privateRsvpDoc.feedbackRating > 0 ? privateRsvpDoc.feedbackRating : null,
+      privateRsvpDoc.feedbackComment || null,
+      privateRsvpDoc.checkedIn ? 'Sudah Tiba' : 'Belum Tiba',
+      privateRsvpDoc.organizerNotes || null,
+    ],
+  });
+
+  notifyListeners();
+
+  return {
+    ...privateRsvpDoc,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+}
+
+export function subscribePublicWishes(
+  onData: (records: RsvpRecord[]) => void,
+  onError?: (message: string) => void
+): Unsubscribe {
+  let isMounted = true;
+
+  const load = async () => {
+    try {
+      const rows = await fetchAllRowsFromTurso();
+      if (!isMounted) return;
+      const records = rows
+        .map(mapRowToPublicRecord)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      onData(records);
+    } catch (error) {
+      if (!isMounted) return;
+      const cached = localStorage.getItem(LOCAL_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as DbRow[];
+        onData(parsed.map(mapRowToPublicRecord));
+        return;
+      }
+      console.error('Turso subscribePublicWishes error:', error);
+      onError?.('Tidak dapat memuatkan ucapan tetamu daripada pangkalan data buat masa ini.');
+    }
+  };
+
+  void load();
+  activeListeners.add(load);
+  const timer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      void load();
+    }
+  }, 15000);
+
+  return () => {
+    isMounted = false;
+    activeListeners.delete(load);
+    window.clearInterval(timer);
+  };
+}
+
+export
