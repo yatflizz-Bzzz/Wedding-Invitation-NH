@@ -243,7 +243,7 @@ export default function App() {
 
       <main
         key={isAdminRoute ? 'admin' : activePage}
-        className={`relative z-30 flex-1 ${
+        className={`relative z-30 flex-1 pb-12 ${
           pagePhase === 'exiting'
             ? 'page-stage-exit'
             : pagePhase === 'entering'
@@ -284,8 +284,6 @@ export default function App() {
               rsvps={rsvps}
               isLoading={isLoadingRsvps}
               loadError={rsvpLoadError}
-              authUser={null}
-              authReady={true}
               onRsvpSubmitted={(created) => {
                 setRsvps((prev) =>
                   prev.some((item) => item.id === created.id) ? prev : [created, ...prev]
@@ -298,7 +296,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
 
-      <footer className="relative z-30 border-t border-[#e892b0]/40 bg-[#fffdf7]/88 backdrop-blur-sm py-6 px-4 text-center">
+      <footer className="relative z-30 border-t border-[#e892b0]/40 bg-[#fffdf7]/88 backdrop-blur-sm py-6 pb-24 px-4 text-center">
         <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#6b1d3a]/80">
           <p className="font-display">
             Majlis Perkahwinan {WEDDING_DETAILS.bride} &amp; {WEDDING_DETAILS.groom} ·{' '}
