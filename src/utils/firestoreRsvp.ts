@@ -1,17 +1,4 @@
-import {
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  Timestamp,
-  updateDoc,
-  where,
-  writeBatch,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebaseAuth';
+import { createClient } from '@libsql/client/web';
 import {
   buildFirestoreRsvpBatchPayloads,
   generateFirestoreRsvpId,
@@ -27,162 +14,109 @@ import {
 
 export { buildFirestoreRsvpBatchPayloads, generateFirestoreRsvpId };
 export type { PrivateRsvpDoc, PublicWishDoc };
+export type Unsubscribe = () => void;
 
 export const PUBLIC_WISHES_COLLECTION = 'public_wishes';
 export const PRIVATE_RSVPS_COLLECTION = 'rsvp_submissions';
 
-function toIsoTimestamp(value: unknown): string {
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString();
-  }
-  if (
-    value &&
-    typeof value === 'object' &&
-    'toDate' in value &&
-    typeof (value as { toDate: () => Date }).toDate === 'function'
-  ) {
-    return (value as { toDate: () => Date }).toDate().toISOString();
-  }
-  if (typeof value === 'string' && value) {
-    return value;
-  }
-  return new Date().toISOString();
+const LOCAL_CACHE_KEY = 'wedding_rsvp_turso_cache_v1';
+
+const tursoUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
+const tursoToken = (import.meta.env.VITE_TURSO_AUTH_TOKEN || '').trim();
+
+const turso = createClient({
+  url: tursoUrl,
+  authToken: tursoToken,
+});
+
+// Pendengar dalaman supaya UI dikemas kini serta-merta selepas hantar/ubah/padam
+const activeListeners = new Set<() => void>();
+
+function notifyListeners(): void {
+  activeListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // Abaikan ralat listener individu
+    }
+  });
 }
 
-function mapPublicDocToRsvpRecord(docId: string, data: Record<string, unknown>): RsvpRecord {
+function mapGuestSideFromDb(rawSide: unknown): GuestSide {
+  const val = String(rawSide ?? '').trim();
+  if (val === 'bride' || val === 'Keluarga Pengantin Perempuan') return 'bride';
+  if (val === 'groom' || val === 'Keluarga Pengantin Lelaki') return 'groom';
+  if (val === 'colleague' || val === 'Rakan Sekerja') return 'colleague';
+  return 'friend';
+}
+
+function mapGuestSideToDb(side: GuestSide): string {
+  switch (side) {
+    case 'bride':
+      return 'Keluarga Pengantin Perempuan';
+    case 'groom':
+      return 'Keluarga Pengantin Lelaki';
+    case 'colleague':
+      return 'Rakan Sekerja';
+    default:
+      return 'Rakan';
+  }
+}
+
+function mapRowToPublicRecord(row: Record<string, unknown>): RsvpRecord {
+  const rawStatus = String(row.attendance_status ?? '').trim();
+  const isDeclining = rawStatus === 'Tidak Dapat Hadir' || rawStatus === 'declining';
+  const createdAt =
+    typeof row.submitted_at === 'string' && row.submitted_at
+      ? row.submitted_at
+      : new Date().toISOString();
+
   return {
-    id: typeof data.id === 'string' ? data.id : docId,
-    fullName: typeof data.fullName === 'string' ? data.fullName : '',
+    id: String(row.id ?? ''),
+    fullName: String(row.full_name ?? ''),
     phone: '',
     email: '',
-    side: (['bride', 'groom', 'friend', 'colleague'].includes(String(data.side))
-      ? data.side
-      : 'friend') as GuestSide,
-    status: data.status === 'declining' ? 'declining' : 'attending',
-    guestCount: typeof data.guestCount === 'number' ? data.guestCount : 0,
-    sessionTime: typeof data.sessionTime === 'string' ? data.sessionTime : '',
+    side: mapGuestSideFromDb(row.guest_side),
+    status: isDeclining ? 'declining' : 'attending',
+    guestCount: typeof row.pax === 'number' ? row.pax : Number(row.pax ?? 0),
+    sessionTime: typeof row.arrival_time === 'string' ? row.arrival_time : '',
     dietaryNotes: '',
-    wishes: typeof data.wishes === 'string' ? data.wishes : '',
-    feedbackRating: typeof data.feedbackRating === 'number' ? data.feedbackRating : 0,
-    createdAt: toIsoTimestamp(data.createdAt),
+    wishes: typeof row.wishes === 'string' ? row.wishes : '',
+    feedbackRating:
+      row.rating !== null && row.rating !== undefined ? Number(row.rating) : 0,
+    createdAt,
   };
 }
 
-function mapPrivateDocToRsvpRecord(docId: string, data: Record<string, unknown>): RsvpRecord {
+function mapRowToPrivateRecord(row: Record<string, unknown>): RsvpRecord {
+  const base = mapRowToPublicRecord(row);
+  const checkinRaw = String(row.checkin_status ?? '').trim();
+  const checkedIn =
+    checkinRaw === 'Sudah Tiba' ||
+    checkinRaw === 'checked_in' ||
+    checkinRaw === 'true' ||
+    checkinRaw === '1';
+
   return {
-    ...mapPublicDocToRsvpRecord(docId, data),
-    phone: typeof data.phone === 'string' ? data.phone : '',
-    email: typeof data.email === 'string' ? data.email : '',
-    dietaryNotes: typeof data.dietaryNotes === 'string' ? data.dietaryNotes : '',
-    feedbackComment: typeof data.feedbackComment === 'string' ? data.feedbackComment : '',
-    checkedIn: Boolean(data.checkedIn),
-    organizerNotes: typeof data.organizerNotes === 'string' ? data.organizerNotes : '',
-    updatedAt: toIsoTimestamp(data.updatedAt),
+    ...base,
+    phone: typeof row.phone === 'string' ? row.phone : '',
+    email: typeof row.email === 'string' ? row.email : '',
+    dietaryNotes: typeof row.dietary_notes === 'string' ? row.dietary_notes : '',
+    feedbackComment: typeof row.feedback === 'string' ? row.feedback : '',
+    checkedIn,
+    organizerNotes:
+      typeof row.organizer_notes === 'string' ? row.organizer_notes : '',
+    updatedAt: base.createdAt,
   };
 }
 
-export async function submitRsvpToFirestore(input: RsvpFormInput): Promise<RsvpRecord> {
-  const id = generateFirestoreRsvpId();
-  const { publicWishDoc, privateRsvpDoc } = buildFirestoreRsvpBatchPayloads(
-    id,
-    input,
-    serverTimestamp()
-  );
-
-  const batch = writeBatch(db);
-  batch.set(doc(db, PUBLIC_WISHES_COLLECTION, id), publicWishDoc);
-  batch.set(doc(db, PRIVATE_RSVPS_COLLECTION, id), privateRsvpDoc);
-
-  try {
-    await batch.commit();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, `${PRIVATE_RSVPS_COLLECTION}/${id}`);
+async function fetchAllRowsFromTurso(): Promise<Record<string, unknown>[]> {
+  if (!tursoUrl) {
+    throw new Error('VITE_TURSO_DATABASE_URL belum ditetapkan di Vercel.');
   }
 
-  const nowIso = new Date().toISOString();
-  return {
-    ...privateRsvpDoc,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  };
-}
-
-export function subscribePublicWishes(
-  onData: (records: RsvpRecord[]) => void,
-  onError?: (message: string) => void
-): Unsubscribe {
-  const q = query(
-    collection(db, PUBLIC_WISHES_COLLECTION),
-    where('status', 'in', ['attending', 'declining']),
-    limit(500)
+  const result = await turso.execute(
+    'SELECT * FROM rsvp_responses ORDER BY submitted_at DESC;'
   );
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const records = snapshot.docs
-        .map((snap) =>
-          mapPublicDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
-        )
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      onData(records);
-    },
-    (error) => {
-      onError?.('Tidak dapat memuatkan ucapan tetamu daripada pangkalan data buat masa ini.');
-      handleFirestoreError(error, OperationType.LIST, PUBLIC_WISHES_COLLECTION);
-    }
-  );
-}
-
-export function subscribePrivateRsvps(
-  onData: (records: RsvpRecord[]) => void,
-  onError?: (message: string) => void
-): Unsubscribe {
-  const q = query(
-    collection(db, PRIVATE_RSVPS_COLLECTION),
-    limit(500)
-  );
-
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const records = snapshot.docs
-        .map((snap) =>
-          mapPrivateDocToRsvpRecord(snap.id, snap.data() as Record<string, unknown>)
-        )
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      onData(records);
-    },
-    (error) => {
-      onError?.('Akses ke rekod penuh tetamu ditolak atau sesi pengesahan tamat.');
-      handleFirestoreError(error, OperationType.LIST, PRIVATE_RSVPS_COLLECTION);
-    }
-  );
-}
-
-export async function updateOrganizerRsvpTracking(
-  id: string,
-  updates: { checkedIn: boolean; organizerNotes: string }
-): Promise<void> {
-  const safeNotes = updates.organizerNotes.trim().slice(0, RSVP_LIMITS.organizerNotesMax);
-  try {
-    await updateDoc(doc(db, PRIVATE_RSVPS_COLLECTION, id), {
-      checkedIn: Boolean(updates.checkedIn),
-      organizerNotes: safeNotes,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `${PRIVATE_RSVPS_COLLECTION}/${id}`);
-  }
-}
-
-export async function deleteRsvpSubmission(id: string): Promise<void> {
-  const batch = writeBatch(db);
-  batch.delete(doc(db, PRIVATE_RSVPS_COLLECTION, id));
-  batch.delete(doc(db, PUBLIC_WISHES_COLLECTION, id));
-  try {
-    await batch.commit();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `${PRIVATE_RSVPS_COLLECTION}/${id}`);
-  }
-}
+  const plainRows = result.rows.map((r) => ({ ...r })) as Record<string
