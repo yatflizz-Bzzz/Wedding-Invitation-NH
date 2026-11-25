@@ -206,6 +206,7 @@ export function subscribePrivateRsvps(
 }
 
 export async function updateOrganizerRsvpTracking(
+  export async function updateOrganizerRsvpTracking(
   id: string,
   updates: { checkedIn: boolean; organizerNotes: string }
 ): Promise<void> {
