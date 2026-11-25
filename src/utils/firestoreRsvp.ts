@@ -212,4 +212,17 @@ export async function updateOrganizerRsvpTracking(
   const turso = getTursoClient();
   const notes = updates.organizerNotes.trim().slice(0, RSVP_LIMITS.organizerNotesMax);
   await turso.execute({
-    sql: 'UPDATE
+    sql: 'UPDATE rsvp_responses SET checkin_status = ?, organizer_notes = ? WHERE id = ?;',
+    args: [updates.checkedIn ? 'Sudah Tiba' : 'Belum Tiba', notes || null, id],
+  });
+  notifyAll();
+}
+
+export async function deleteRsvpSubmission(id: string): Promise<void> {
+  const turso = getTursoClient();
+  await turso.execute({
+    sql: 'DELETE FROM rsvp_responses WHERE id = ?;',
+    args: [id],
+  });
+  notifyAll();
+}
