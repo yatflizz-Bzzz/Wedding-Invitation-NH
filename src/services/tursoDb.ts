@@ -1,4 +1,4 @@
-import { createClient } from '@libsql/client/web';
+import { createClient, type Client } from '@libsql/client/web';
 
 export interface RsvpResponse {
   id: string;
@@ -20,17 +20,40 @@ export interface RsvpResponse {
 
 const LOCAL_BACKUP_KEY = 'wedding_rsvp_emergency_cache_v1';
 
-const tursoUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
-const tursoToken = (import.meta.env.VITE_TURSO_AUTH_TOKEN || '').trim();
+let tursoClient: Client | null = null;
 
-export const turso = createClient({
-  url: tursoUrl,
-  authToken: tursoToken,
-});
+function getTursoClient(): Client {
+  if (tursoClient) return tursoClient;
 
-// 1. Pastikan jadual wujud (selamat dijalankan pada permulaan aplikasi)
+  const rawUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
+  const authToken = (import.meta.env.VITE_TURSO_AUTH_TOKEN || '').trim();
+
+  if (!rawUrl) {
+    throw new Error('VITE_TURSO_DATABASE_URL tiada atau kosong.');
+  }
+  if (!authToken) {
+    throw new Error('VITE_TURSO_AUTH_TOKEN tiada atau kosong.');
+  }
+
+  tursoClient = createClient({
+    url: rawUrl.replace(/^libsql:\/\//i, 'https://'),
+    authToken,
+  });
+
+  return tursoClient;
+}
+
+function saveLocalBackup(rows: RsvpResponse[]): void {
+  try {
+    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(rows));
+  } catch {
+    // Abaikan jika storan pelayar penuh atau disekat
+  }
+}
+
 export async function initRsvpTable(): Promise<void> {
-  await turso.execute(`
+  const db = getTursoClient();
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS rsvp_responses (
       id TEXT PRIMARY KEY,
       submitted_at TEXT NOT NULL,
@@ -51,10 +74,10 @@ export async function initRsvpTable(): Promise<void> {
   `);
 }
 
-// 2. Ambil semua rekod RSVP & ucapan (susunan terkini di atas)
 export async function getAllRsvps(): Promise<RsvpResponse[]> {
   try {
-    const result = await turso.execute(
+    const db = getTursoClient();
+    const result = await db.execute(
       'SELECT * FROM rsvp_responses ORDER BY submitted_at DESC;'
     );
 
@@ -76,13 +99,7 @@ export async function getAllRsvps(): Promise<RsvpResponse[]> {
       organizer_notes: row.organizer_notes ? String(row.organizer_notes) : null,
     }));
 
-    // Auto-simpan salinan terkini dalam browser sebagai backup kecemasan
-    try {
-      localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(rows));
-    } catch {
-      // Abaikan jika storan pelayar penuh
-    }
-
+    saveLocalBackup(rows);
     return rows;
   } catch (error) {
     console.error('Gagal membaca dari Turso, memuatkan cache tempatan:', error);
@@ -94,29 +111,41 @@ export async function getAllRsvps(): Promise<RsvpResponse[]> {
   }
 }
 
-// 3. Simpan borang RSVP / Ucapan baharu
 export async function submitNewRsvp(
-  data: Omit<RsvpResponse, 'id' | 'submitted_at'> & { id?: string; submitted_at?: string }
+  data: Omit<RsvpResponse, 'id' | 'submitted_at'> & {
+    id?: string;
+    submitted_at?: string;
+  }
 ): Promise<RsvpResponse> {
+  const db = getTursoClient();
+
+  const isAttending = data.attendance_status === 'Hadir';
+  const normalizedPax = isAttending ? Math.max(1, Number(data.pax || 1)) : 0;
+
   const newRecord: RsvpResponse = {
-    id: data.id || `rsvp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id:
+      data.id ||
+      `rsvp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     submitted_at: data.submitted_at || new Date().toISOString(),
     full_name: data.full_name.trim(),
     phone: data.phone?.trim() || null,
     email: data.email?.trim() || null,
-    guest_side: data.guest_side || 'Rakan',
+    guest_side: data.guest_side?.trim() || 'Rakan',
     attendance_status: data.attendance_status,
-    pax: data.attendance_status === 'Hadir' ? Number(data.pax || 1) : 0,
-    arrival_time: data.arrival_time || null,
+    pax: normalizedPax,
+    arrival_time: data.arrival_time?.trim() || null,
     dietary_notes: data.dietary_notes?.trim() || null,
     wishes: data.wishes?.trim() || null,
-    rating: data.rating ?? null,
+    rating:
+      data.rating !== null && data.rating !== undefined
+        ? Number(data.rating)
+        : null,
     feedback: data.feedback?.trim() || null,
-    checkin_status: data.checkin_status || 'Belum Tiba',
+    checkin_status: data.checkin_status?.trim() || 'Belum Tiba',
     organizer_notes: data.organizer_notes?.trim() || null,
   };
 
-  await turso.execute({
+  await db.execute({
     sql: `
       INSERT INTO rsvp_responses (
         id, submitted_at, full_name, phone, email, guest_side,
@@ -143,16 +172,29 @@ export async function submitNewRsvp(
     ],
   });
 
+  try {
+    const existingRaw = localStorage.getItem(LOCAL_BACKUP_KEY);
+    const existingList = existingRaw
+      ? (JSON.parse(existingRaw) as RsvpResponse[])
+      : [];
+    saveLocalBackup([
+      newRecord,
+      ...existingList.filter((item) => item.id !== newRecord.id),
+    ]);
+  } catch {
+    // Abaikan ralat cache tempatan
+  }
+
   return newRecord;
 }
 
-// 4. Kemas kini status daftar masuk tetamu (hari majlis) atau catatan penganjur
 export async function updateRsvpCheckin(
   id: string,
   checkinStatus: string,
   organizerNotes?: string | null
 ): Promise<void> {
-  await turso.execute({
+  const db = getTursoClient();
+  await db.execute({
     sql: `
       UPDATE rsvp_responses
       SET checkin_status = ?, organizer_notes = COALESCE(?, organizer_notes)
@@ -162,22 +204,24 @@ export async function updateRsvpCheckin(
   });
 }
 
-// 5. Padam rekod RSVP
 export async function deleteRsvpById(id: string): Promise<void> {
-  await turso.execute({
+  const db = getTursoClient();
+  await db.execute({
     sql: 'DELETE FROM rsvp_responses WHERE id = ?;',
     args: [id],
   });
 }
 
-// 6. Pulihkan senarai rekod daripada fail Backup (.json)
-export async function restoreRsvpsFromBackup(records: RsvpResponse[]): Promise<number> {
+export async function restoreRsvpsFromBackup(
+  records: RsvpResponse[]
+): Promise<number> {
+  const db = getTursoClient();
   await initRsvpTable();
   let restoredCount = 0;
 
   for (const item of records) {
     if (!item.id || !item.full_name) continue;
-    await turso.execute({
+    await db.execute({
       sql: `
         INSERT OR REPLACE INTO rsvp_responses (
           id, submitted_at, full_name, phone, email, guest_side,
@@ -197,7 +241,9 @@ export async function restoreRsvpsFromBackup(records: RsvpResponse[]): Promise<n
         item.arrival_time ?? null,
         item.dietary_notes ?? null,
         item.wishes ?? null,
-        item.rating !== null && item.rating !== undefined ? Number(item.rating) : null,
+        item.rating !== null && item.rating !== undefined
+          ? Number(item.rating)
+          : null,
         item.feedback ?? null,
         item.checkin_status || 'Belum Tiba',
         item.organizer_notes ?? null,
