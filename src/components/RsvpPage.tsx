@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import type { User } from 'firebase/auth';
 import {
   ArrowLeft,
   Heart,
@@ -34,8 +33,8 @@ interface RsvpPageProps {
   rsvps: RsvpRecord[];
   isLoading: boolean;
   loadError: string | null;
-  authUser: User | null;
-  authReady: boolean;
+  authUser?: unknown;
+  authReady?: boolean;
   onRsvpSubmitted: (created: RsvpRecord) => void;
   onBackToInvitation: () => void;
 }
@@ -196,7 +195,7 @@ export function RsvpPage({
   }
 
   return (
-    <div className="px-4 py-8 sm:px-8 sm:py-12 space-y-12">
+    <div className="px-4 py-8 sm:px-8 sm:py-12 pb-24 space-y-12">
       <div className="mx-auto max-w-5xl">
         {/* Butang kembali */}
         <div className="mb-6">
@@ -695,7 +694,7 @@ export function RsvpPage({
                     Tiada ucapan tetamu dalam paparan ini lagi. Jadilah yang pertama menghantar ucapan!
                   </div>
                 ) : (
-                  <ul className="space-y-3.5 max-h-[540px] overflow-y-auto pr-1">
+                  <ul className="space-y-3.5">
                     {filteredRsvps.map((entry) => (
                       <li
                         key={entry.id}
