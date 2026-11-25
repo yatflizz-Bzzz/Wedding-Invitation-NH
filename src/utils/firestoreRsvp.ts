@@ -234,4 +234,4 @@ export async function deleteRsvpSubmission(id: string): Promise<void> {
     args: [id],
   });
   notifyAll();
-}
+ }
