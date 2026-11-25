@@ -282,7 +282,7 @@ export function OrganizerTrackerPanel({
   };
 
   return (
-    <section aria-labelledby="organizer-tracker-heading" className="mx-auto max-w-5xl">
+    <section aria-labelledby="organizer-tracker-heading" className="mx-auto max-w-5xl pb-24">
       <PaperLaceCard lilySize="sm">
         {/* Tajuk Panel Penjejakan */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#f2c8da] pb-4">
@@ -501,7 +501,7 @@ export function OrganizerTrackerPanel({
               <p>Tiada rekod sepadan dengan penapis semasa.</p>
             </div>
           ) : (
-            <ul className="space-y-3.5 max-h-[680px] overflow-y-auto pr-1">
+            <ul className="space-y-3.5 pb-16">
               {filteredRecords.map((record) => {
                 const isBusy = savingId === record.id;
                 const noteValue = noteDrafts[record.id] ?? record.organizerNotes ?? '';
@@ -651,7 +651,7 @@ export function OrganizerTrackerPanel({
                     )}
 
                     {/* Catatan Penganjur */}
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <input
                         type="text"
                         maxLength={RSVP_LIMITS.organizerNotesMax}
@@ -664,13 +664,13 @@ export function OrganizerTrackerPanel({
                         }
                         placeholder="Catatan penganjur (cth. Meja VIP 2, sudah hubungi)..."
                         aria-label={`Catatan penganjur untuk ${record.fullName}`}
-                        className="flex-1 rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3 py-1.5 text-xs text-[#4e1228] placeholder:text-[#4e1228]/45 focus:border-[#6b1d3a] focus:outline-none"
+                        className="flex-1 rounded-xl border border-[#e892b0]/75 bg-[#ffffff] px-3 py-2 text-xs text-[#4e1228] placeholder:text-[#4e1228]/45 focus:border-[#6b1d3a] focus:outline-none"
                       />
                       <button
                         type="button"
                         disabled={isBusy || !noteDirty}
                         onClick={() => handleSaveNotes(record)}
-                        className="btn-blush-silk rounded-full px-4 py-1.5 text-xs font-semibold text-[#591d36] cursor-pointer disabled:opacity-45"
+                        className="btn-blush-silk shrink-0 rounded-full px-4 py-2 text-xs font-semibold text-[#591d36] cursor-pointer disabled:opacity-45"
                       >
                         Simpan Catatan
                       </button>
