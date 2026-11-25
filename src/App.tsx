@@ -10,9 +10,8 @@ import { MusicPlayer } from './components/MusicPlayer';
 import { OrganizerTrackerPanel } from './components/OrganizerTrackerPanel';
 import { RsvpPage } from './components/RsvpPage';
 import { WEDDING_DETAILS } from './data/weddingData';
-import { initOrganizerAuth, testFirestoreConnection } from './utils/firebaseAuth';
-import { subscribePublicWishes } from './utils/firestoreRsvp';
-import type { RsvpRecord } from './utils/wedding';
+import { getAllRsvps, initRsvpTable, type RsvpResponse } from './services/tursoDb';
+import type { GuestSide, RsvpRecord } from './utils/wedding';
 
 function checkIsAdminLocation(): boolean {
   if (typeof window === 'undefined') return false;
@@ -33,6 +32,35 @@ function getInitialRoute(): { page: ActivePage; autostart: boolean; isAdmin: boo
   };
 }
 
+function mapTursoRowToRecord(row: RsvpResponse): RsvpRecord {
+  const isAttending =
+    row.attendance_status === 'Hadir' || row.attendance_status === 'attending';
+
+  let side: GuestSide = 'friend';
+  if (row.guest_side === 'Keluarga Pengantin Perempuan') side = 'bride';
+  else if (row.guest_side === 'Keluarga Pengantin Lelaki') side = 'groom';
+  else if (row.guest_side === 'Rakan Sekerja') side = 'colleague';
+
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    side,
+    status: isAttending ? 'attending' : 'declining',
+    guestCount: isAttending ? Math.max(0, Number(row.pax ?? 0)) : 0,
+    sessionTime: row.arrival_time ?? '',
+    dietaryNotes: row.dietary_notes ?? '',
+    wishes: row.wishes ?? '',
+    feedbackRating: row.rating ? Number(row.rating) : 0,
+    feedbackComment: row.feedback ?? '',
+    checkedIn: row.checkin_status === 'Sudah Tiba',
+    organizerNotes: row.organizer_notes ?? '',
+    createdAt: row.submitted_at,
+    updatedAt: row.submitted_at,
+  };
+}
+
 export default function App() {
   const initial = getInitialRoute();
   const [activePage, setActivePage] = useState<ActivePage>(initial.page);
@@ -41,7 +69,7 @@ export default function App() {
   const [rsvps, setRsvps] = useState<RsvpRecord[]>([]);
   const [isLoadingRsvps, setIsLoadingRsvps] = useState<boolean>(true);
   const [rsvpLoadError, setRsvpLoadError] = useState<string | null>(null);
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(false);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
   const transitionTimersRef = React.useRef<number[]>([]);
@@ -66,31 +94,28 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showVideoModal]);
 
-  useEffect(() => {
-    void testFirestoreConnection();
-    const unsubAuth = initOrganizerAuth((user, ready) => {
-      setAuthUser(user);
-      setAuthReady(ready);
-    });
-    return () => unsubAuth();
+  const loadRsvpsFromTurso = useCallback(async () => {
+    setIsLoadingRsvps(true);
+    setRsvpLoadError(null);
+    try {
+      await initRsvpTable();
+      const rows = await getAllRsvps();
+      setRsvps(rows.map(mapTursoRowToRecord));
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Gagal memuatkan data RSVP daripada Turso.';
+      setRsvpLoadError(msg);
+    } finally {
+      setIsLoadingRsvps(false);
+      setAuthReady(true);
+    }
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
-    setIsLoadingRsvps(true);
-    setRsvpLoadError(null);
-    const unsubWishes = subscribePublicWishes(
-      (records) => {
-        setRsvps(records);
-        setIsLoadingRsvps(false);
-      },
-      (msg) => {
-        setRsvpLoadError(msg);
-        setIsLoadingRsvps(false);
-      }
-    );
-    return () => unsubWishes();
-  }, [authReady]);
+    void loadRsvpsFromTurso();
+  }, [loadRsvpsFromTurso]);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -120,7 +145,6 @@ export default function App() {
 
     const targetHash = page === 'rsvp' ? '/#/rsvp' : '/#/';
 
-    // Same page smooth scroll (no cross-page veil needed)
     if (!isAdminRoute && page === activePage) {
       window.history.replaceState(null, '', targetHash);
       if (sectionId) {
@@ -134,7 +158,6 @@ export default function App() {
       return;
     }
 
-    // Instant switch for reduced-motion accessibility
     if (prefersReducedMotion) {
       window.history.replaceState(null, '', targetHash);
       setIsAdminRoute(false);
@@ -148,7 +171,6 @@ export default function App() {
       return;
     }
 
-    // Smooth stationery cross-page transition
     clearTransitionTimers();
     setPagePhase('exiting');
 
@@ -263,11 +285,12 @@ export default function App() {
               loadError={rsvpLoadError}
               authUser={authUser}
               authReady={authReady}
-              onRsvpSubmitted={(created) =>
+              onRsvpSubmitted={(created) => {
                 setRsvps((prev) =>
                   prev.some((item) => item.id === created.id) ? prev : [created, ...prev]
-                )
-              }
+                );
+                void loadRsvpsFromTurso();
+              }}
               onBackToInvitation={() => handleNavigatePage('invitation', 'hero-invitation')}
             />
           )}
