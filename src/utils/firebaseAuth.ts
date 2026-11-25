@@ -177,8 +177,7 @@ export async function signInWithGoogle(): Promise<User> {
 export async function logout(): Promise<void> {
   currentUser = null;
   try {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-} catch {
+    localStorage.removeItem(SESSION_STORAGE_KEY);} catch {
     // Abaikan ralat storan
   }
   notifyAuthListeners();
