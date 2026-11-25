@@ -125,6 +125,10 @@ export default function App() {
     void loadRsvpsFromTurso();
   }, [loadRsvpsFromTurso]);
 
+  const handleAdminRecordsChanged = useCallback((updated: RsvpRecord[]) => {
+    setRsvps(updated);
+  }, []);
+
   useEffect(() => {
     const handleLocationChange = () => {
       if (checkIsAdminLocation()) {
@@ -267,7 +271,7 @@ export default function App() {
                 </div>
                 <OrganizerTrackerPanel
                   publicRsvps={rsvps}
-                  onRecordsChanged={(updated) => setRsvps(updated)}
+                  onRecordsChanged={handleAdminRecordsChanged}
                 />
               </div>
             </div>
