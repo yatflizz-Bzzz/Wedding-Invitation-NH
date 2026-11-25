@@ -178,7 +178,7 @@ export async function logout(): Promise<void> {
   currentUser = null;
   try {
     localStorage.removeItem(SESSION_STORAGE_KEY);
-} catch {
+  } catch {
     // Abaikan ralat storan
   }
   notifyAuthListeners();
