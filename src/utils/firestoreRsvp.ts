@@ -20,27 +20,23 @@ export const PUBLIC_WISHES_COLLECTION = 'public_wishes';
 export const PRIVATE_RSVPS_COLLECTION = 'rsvp_submissions';
 
 type DbRow = Record<string, unknown>;
-
-const LOCAL_CACHE_KEY = 'wedding_rsvp_turso_cache_v1';
+const CACHE_KEY = 'wedding_rsvp_turso_cache_v1';
 let cachedClient: Client | null = null;
+const listeners = new Set<() => void>();
 
 function getTursoClient(): Client {
   if (cachedClient) return cachedClient;
-
   const rawUrl = (import.meta.env.VITE_TURSO_DATABASE_URL || '').trim();
   const authToken = (import.meta.env.VITE_TURSO_AUTH_TOKEN || '').trim();
-
   if (!rawUrl) {
-    throw new Error('VITE_TURSO_DATABASE_URL belum ditetapkan di Vercel.');
+    throw new Error('VITE_TURSO_DATABASE_URL belum ditetapkan.');
   }
-
-  const url = rawUrl.replace(/^libsql:\/\//i, 'https://');
-  cachedClient = createClient({ url, authToken });
+  cachedClient = createClient({
+    url: rawUrl.replace(/^libsql:\/\//i, 'https://'),
+    authToken,
+  });
   return cachedClient;
 }
-
-const listeners = new Set<() => void>();
-const notifyAll = () => listeners.forEach((fn) => fn());
 
 function sideFromDb(raw: unknown): GuestSide {
   const s = String(raw ?? '').trim();
@@ -95,13 +91,12 @@ function toPrivateRecord(row: DbRow): RsvpRecord {
 }
 
 async function fetchRows(): Promise<DbRow[]> {
-  const turso = getTursoClient();
-  const res = await turso.execute(
+  const res = await getTursoClient().execute(
     'SELECT * FROM rsvp_responses ORDER BY submitted_at DESC;'
   );
   const rows: DbRow[] = res.rows.map((r) => ({ ...r }));
   try {
-    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(rows));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
   } catch {
     // Abaikan jika storan pelayar penuh
   }
@@ -122,7 +117,7 @@ function subscribeRows(
       onData(rows.map(mapper).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     } catch (err) {
       if (!active) return;
-      const cached = localStorage.getItem(LOCAL_CACHE_KEY);
+      const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         onData((JSON.parse(cached) as DbRow[]).map(mapper));
         return;
@@ -146,18 +141,13 @@ function subscribeRows(
 }
 
 export async function submitRsvpToFirestore(input: RsvpFormInput): Promise<RsvpRecord> {
-  const turso = getTursoClient();
   const id = generateFirestoreRsvpId();
   const nowIso = new Date().toISOString();
   const { privateRsvpDoc } = buildFirestoreRsvpBatchPayloads(id, input, nowIso);
   const isDeclining = privateRsvpDoc.status === 'declining';
 
-  await turso.execute({
-    sql: `INSERT INTO rsvp_responses (
-      id, submitted_at, full_name, phone, email, guest_side,
-      attendance_status, pax, arrival_time, dietary_notes,
-      wishes, rating, feedback, checkin_status, organizer_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+  await getTursoClient().execute({
+    sql: 'INSERT INTO rsvp_responses (id, submitted_at, full_name, phone, email, guest_side, attendance_status, pax, arrival_time, dietary_notes, wishes, rating, feedback, checkin_status, organizer_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
     args: [
       id,
       nowIso,
@@ -177,7 +167,7 @@ export async function submitRsvpToFirestore(input: RsvpFormInput): Promise<RsvpR
     ],
   });
 
-  notifyAll();
+  listeners.forEach((fn) => fn());
   return { ...privateRsvpDoc, createdAt: nowIso, updatedAt: nowIso };
 }
 
@@ -206,32 +196,21 @@ export function subscribePrivateRsvps(
 }
 
 export async function updateOrganizerRsvpTracking(
-  export async function updateOrganizerRsvpTracking(
   id: string,
   updates: { checkedIn: boolean; organizerNotes: string }
 ): Promise<void> {
-  const turso = getTursoClient();
   const notes = updates.organizerNotes.trim().slice(0, RSVP_LIMITS.organizerNotesMax);
-  await turso.execute({
+  await getTursoClient().execute({
     sql: 'UPDATE rsvp_responses SET checkin_status = ?, organizer_notes = ? WHERE id = ?;',
     args: [updates.checkedIn ? 'Sudah Tiba' : 'Belum Tiba', notes || null, id],
   });
-  notifyAll();
+  listeners.forEach((fn) => fn());
 }
 
 export async function deleteRsvpSubmission(id: string): Promise<void> {
-  const turso = getTursoClient();
-  await turso.execute({
+  await getTursoClient().execute({
     sql: 'DELETE FROM rsvp_responses WHERE id = ?;',
     args: [id],
   });
-  notifyAll();
+  listeners.forEach((fn) => fn());
 }
- export async function deleteRsvpSubmission(id: string): Promise<void> {
-  const turso = getTursoClient();
-  await turso.execute({
-    sql: 'DELETE FROM rsvp_responses WHERE id = ?;',
-    args: [id],
-  });
-  notifyAll();
- }
