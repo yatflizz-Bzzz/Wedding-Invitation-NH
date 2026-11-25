@@ -227,5 +227,11 @@ export async function deleteRsvpSubmission(id: string): Promise<void> {
   });
   notifyAll();
 }
+ export async function deleteRsvpSubmission(id: string): Promise<void> {
+  const turso = getTursoClient();
+  await turso.execute({
+    sql: 'DELETE FROM rsvp_responses WHERE id = ?;',
+    args: [id],
+  });
   notifyAll();
 }
