@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
 import { ArrowLeft, Film, X } from 'lucide-react';
 import { EnvelopeHero } from './components/EnvelopeHero';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -37,9 +36,19 @@ function mapTursoRowToRecord(row: RsvpResponse): RsvpRecord {
     row.attendance_status === 'Hadir' || row.attendance_status === 'attending';
 
   let side: GuestSide = 'friend';
-  if (row.guest_side === 'Keluarga Pengantin Perempuan') side = 'bride';
-  else if (row.guest_side === 'Keluarga Pengantin Lelaki') side = 'groom';
-  else if (row.guest_side === 'Rakan Sekerja') side = 'colleague';
+  if (
+    row.guest_side === 'Keluarga Pengantin Perempuan' ||
+    row.guest_side === 'Pengantin Perempuan'
+  ) {
+    side = 'bride';
+  } else if (
+    row.guest_side === 'Keluarga Pengantin Lelaki' ||
+    row.guest_side === 'Pengantin Lelaki'
+  ) {
+    side = 'groom';
+  } else if (row.guest_side === 'Rakan Sekerja') {
+    side = 'colleague';
+  }
 
   return {
     id: row.id,
@@ -54,7 +63,9 @@ function mapTursoRowToRecord(row: RsvpResponse): RsvpRecord {
     wishes: row.wishes ?? '',
     feedbackRating: row.rating ? Number(row.rating) : 0,
     feedbackComment: row.feedback ?? '',
-    checkedIn: row.checkin_status === 'Sudah Tiba',
+    checkedIn:
+      row.checkin_status === 'Sudah Tiba' ||
+      row.checkin_status === 'Sudah Daftar Masuk',
     organizerNotes: row.organizer_notes ?? '',
     createdAt: row.submitted_at,
     updatedAt: row.submitted_at,
@@ -69,8 +80,6 @@ export default function App() {
   const [rsvps, setRsvps] = useState<RsvpRecord[]>([]);
   const [isLoadingRsvps, setIsLoadingRsvps] = useState<boolean>(true);
   const [rsvpLoadError, setRsvpLoadError] = useState<string | null>(null);
-  const [authUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState<boolean>(false);
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
   const transitionTimersRef = React.useRef<number[]>([]);
 
@@ -109,7 +118,6 @@ export default function App() {
       setRsvpLoadError(msg);
     } finally {
       setIsLoadingRsvps(false);
-      setAuthReady(true);
     }
   }, []);
 
@@ -199,25 +207,20 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen flex flex-col text-[#4e1228] overflow-x-clip">
-      {/* Fixed Watercolor Meadow Background */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none"
         style={{ backgroundImage: "url('/assets/aistudio/Copy_of_Kad_Digital_Kahwin_1.0_7daeed5a.png')" }}
         aria-hidden="true"
       />
-      {/* Soft Pastel Pink & Buttercream Veil for legibility */}
       <div
         className="fixed inset-0 z-10 bg-gradient-to-b from-[#fffdf7]/35 via-[#fbe9f0]/28 to-[#fdf4d7]/40 pointer-events-none"
         aria-hidden="true"
       />
 
-      {/* Ambient Floating Petals & Butterflies */}
       <FloatingPetals />
 
-      {/* Top Navigation Bar */}
       <Header activePage={activePage} onNavigatePage={handleNavigatePage} />
 
-      {/* Smooth Cross-Page Floral Stationery Transition Veil */}
       {pagePhase !== 'idle' && (
         <div
           aria-hidden="true"
@@ -238,7 +241,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Content */}
       <main
         key={isAdminRoute ? 'admin' : activePage}
         className={`relative z-30 flex-1 ${
@@ -265,8 +267,7 @@ export default function App() {
                 </div>
                 <OrganizerTrackerPanel
                   publicRsvps={rsvps}
-                  authUser={authUser}
-                  authReady={authReady}
+                  onRecordsChanged={(updated) => setRsvps(updated)}
                 />
               </div>
             </div>
@@ -283,8 +284,8 @@ export default function App() {
               rsvps={rsvps}
               isLoading={isLoadingRsvps}
               loadError={rsvpLoadError}
-              authUser={authUser}
-              authReady={authReady}
+              authUser={null}
+              authReady={true}
               onRsvpSubmitted={(created) => {
                 setRsvps((prev) =>
                   prev.some((item) => item.id === created.id) ? prev : [created, ...prev]
@@ -297,7 +298,6 @@ export default function App() {
         </ErrorBoundary>
       </main>
 
-      {/* Pengaki */}
       <footer className="relative z-30 border-t border-[#e892b0]/40 bg-[#fffdf7]/88 backdrop-blur-sm py-6 px-4 text-center">
         <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#6b1d3a]/80">
           <p className="font-display">
@@ -324,10 +324,8 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Pemain Muzik Piano Terapung */}
       <MusicPlayer />
 
-      {/* Modal Kad Video Asal */}
       {showVideoModal && (
         <div
           role="dialog"
