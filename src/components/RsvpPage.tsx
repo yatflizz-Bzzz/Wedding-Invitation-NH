@@ -17,7 +17,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { PaperLaceCard } from './PaperLaceCard';
 import { RsvpConfirmationPage } from './RsvpConfirmationPage';
 import { WEDDING_DETAILS } from '../data/weddingData';
-import { submitRsvpToFirestore } from '../utils/firestoreRsvp';
+import { submitNewRsvp, type RsvpResponse } from '../services/tursoDb';
 import {
   normalizeRsvpPayload,
   RSVP_LIMITS,
@@ -60,6 +60,34 @@ const SIDE_LABELS: Record<GuestSide, string> = {
   friend: 'Rakan',
   colleague: 'Rakan Sekerja',
 };
+
+function mapResponseToRecord(row: RsvpResponse, fallbackSide: GuestSide): RsvpRecord {
+  const isAttending = row.attendance_status === 'Hadir' || row.attendance_status === 'attending';
+  let side: GuestSide = fallbackSide;
+  if (row.guest_side === 'Keluarga Pengantin Perempuan') side = 'bride';
+  else if (row.guest_side === 'Keluarga Pengantin Lelaki') side = 'groom';
+  else if (row.guest_side === 'Rakan Sekerja') side = 'colleague';
+  else if (row.guest_side === 'Rakan') side = 'friend';
+
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    side,
+    status: isAttending ? 'attending' : 'declining',
+    guestCount: isAttending ? Number(row.pax ?? 1) : 0,
+    sessionTime: row.arrival_time ?? '',
+    dietaryNotes: row.dietary_notes ?? '',
+    wishes: row.wishes ?? '',
+    feedbackRating: row.rating ? Number(row.rating) : 0,
+    feedbackComment: row.feedback ?? '',
+    checkedIn: row.checkin_status === 'Sudah Tiba',
+    organizerNotes: row.organizer_notes ?? '',
+    createdAt: row.submitted_at,
+    updatedAt: row.submitted_at,
+  };
+}
 
 export function RsvpPage({
   rsvps,
@@ -114,7 +142,28 @@ export function RsvpPage({
 
     try {
       const payload = normalizeRsvpPayload(form);
-      const created = await submitRsvpToFirestore(payload);
+      const isAttending = payload.status === 'attending';
+
+      const savedRow = await submitNewRsvp({
+        full_name: payload.fullName,
+        phone: payload.phone || null,
+        email: payload.email || null,
+        guest_side: SIDE_LABELS[payload.side],
+        attendance_status: isAttending ? 'Hadir' : 'Tidak Dapat Hadir',
+        pax: isAttending ? Math.max(1, Number(payload.guestCount || 1)) : 0,
+        arrival_time: isAttending ? payload.sessionTime || null : null,
+        dietary_notes: isAttending ? payload.dietaryNotes || null : null,
+        wishes: payload.wishes || null,
+        rating:
+          payload.feedbackRating && payload.feedbackRating > 0
+            ? Number(payload.feedbackRating)
+            : null,
+        feedback: payload.feedbackComment || null,
+        checkin_status: 'Belum Tiba',
+        organizer_notes: null,
+      });
+
+      const created = mapResponseToRecord(savedRow, payload.side);
       onRsvpSubmitted(created);
       setSubmittedRecord(created);
       setForm(INITIAL_FORM);
